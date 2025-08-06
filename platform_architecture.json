@@ -1,0 +1,122 @@
+{
+  "project_name": "clinical-intelligence-platform",
+  "tech_stack": {
+    "frontend": {
+      "framework": "Next.js 14",
+      "language": "TypeScript",
+      "styling": "Tailwind CSS",
+      "ui_components": "shadcn/ui",
+      "state_management": "Zustand",
+      "forms": "React Hook Form + Zod",
+      "pwa": "next-pwa",
+      "deployment": "Vercel"
+    },
+    "backend": {
+      "runtime": "Vercel Edge Functions",
+      "language": "TypeScript",
+      "database": "Supabase PostgreSQL",
+      "authentication": "Supabase Auth",
+      "real_time": "Supabase Realtime",
+      "file_storage": "Supabase Storage",
+      "caching": "Upstash Redis"
+    },
+    "ml_ai": {
+      "primary": "Perplexity Pro API",
+      "client_side": "TensorFlow.js",
+      "inference": "Hugging Face Inference API",
+      "embeddings": "OpenAI Embeddings API",
+      "background_jobs": "Trigger.dev"
+    },
+    "external_apis": {
+      "clinical_trials": "ClinicalTrials.gov API",
+      "regulatory": "OpenFDA API",
+      "literature": "PubMed E-utilities",
+      "patents": "Google Patents API",
+      "news": "News API"
+    }
+  },
+  "stakeholder_modules": {
+    "pharmaceutical": {
+      "features": [
+        "Regulatory Intelligence Dashboard",
+        "Competitive Landscape Analysis",
+        "Site Selection Optimization",
+        "ROI Calculator",
+        "Market Access Strategy",
+        "Portfolio Analytics"
+      ],
+      "apis_used": [
+        "OpenFDA",
+        "ClinicalTrials.gov",
+        "PubMed",
+        "Patents",
+        "News"
+      ],
+      "ml_capabilities": [
+        "Regulatory impact classification",
+        "Competitive threat scoring",
+        "Site performance prediction",
+        "Market trend analysis"
+      ]
+    },
+    "physicians": {
+      "features": [
+        "Patient-Trial Matching",
+        "One-click Referrals",
+        "Patient Education Generator",
+        "CME Credit Tracking",
+        "Mobile Interface",
+        "EMR Integration Prep"
+      ],
+      "apis_used": [
+        "ClinicalTrials.gov",
+        "PubMed"
+      ],
+      "ml_capabilities": [
+        "Eligibility scoring",
+        "Semantic matching",
+        "Content generation",
+        "Risk assessment"
+      ]
+    },
+    "cros": {
+      "features": [
+        "Site Performance Analytics",
+        "Enrollment Tracking",
+        "Geographic Analysis",
+        "Competitive Assessment",
+        "Budget Forecasting",
+        "Quality Scoring"
+      ],
+      "apis_used": [
+        "ClinicalTrials.gov",
+        "News"
+      ],
+      "ml_capabilities": [
+        "Performance prediction",
+        "Enrollment forecasting",
+        "Risk scoring",
+        "Resource optimization"
+      ]
+    }
+  },
+  "cost_optimization": {
+    "free_tiers": {
+      "vercel": "Free hosting + 100GB Edge Functions",
+      "supabase": "500MB database + 2GB bandwidth",
+      "upstash": "10K Redis commands daily",
+      "trigger_dev": "$5 free monthly usage",
+      "huggingface": "1K inferences monthly",
+      "perplexity": "$5 monthly credit with Pro subscription"
+    },
+    "estimated_monthly_cost": "$20-50 for first 6 months"
+  },
+  "deployment_timeline": {
+    "phase_1": "Core infrastructure and authentication (Day 1-2)",
+    "phase_2": "Data pipeline and API integrations (Day 2-3)",
+    "phase_3": "ML model implementation (Day 3-4)",
+    "phase_4": "Stakeholder-specific features (Day 4-5)",
+    "phase_5": "Testing and optimization (Day 5-6)",
+    "phase_6": "Demo preparation (Day 6-7)"
+  }
+}
