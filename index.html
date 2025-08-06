@@ -3,382 +3,251 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ClinicalIntel Pro - Clinical Research Intelligence Platform</title>
+    <title>Clinical Research Intelligence Platform</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="manifest" href="data:application/json,{'name':'ClinicalIntel Pro','short_name':'ClinicalIntel','theme_color':'#1d7485','background_color':'#fcfcf9','display':'standalone','start_url':'/','icons':[{'src':'data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"45\" fill=\"%231d7485\"/><text x=\"50\" y=\"60\" font-family=\"Arial\" font-size=\"40\" fill=\"white\" text-anchor=\"middle\">CI</text></svg>','sizes':'192x192','type':'image/svg+xml'}]}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Loading Screen -->
-    <div id="loading-screen" class="loading-screen">
-        <div class="loading-spinner"></div>
-        <h2>Loading ClinicalIntel Pro...</h2>
-        <p>Initializing ML models and real-time data feeds</p>
-    </div>
-
-    <!-- Welcome Screen -->
-    <div id="welcome-screen" class="welcome-screen hidden">
-        <div class="welcome-container">
-            <header class="welcome-header">
-                <h1>ClinicalIntel Pro</h1>
-                <p>AI-Powered Clinical Research Intelligence Platform</p>
-            </header>
-            
-            <div class="stakeholder-selection">
-                <h2>Select Your Role</h2>
-                <div class="stakeholder-cards">
-                    <div class="stakeholder-card" data-role="pharmaceutical">
-                        <div class="card-icon">🏢</div>
-                        <h3>Pharmaceutical Companies</h3>
-                        <p>Regulatory intelligence, competitive analysis, and ROI optimization</p>
-                        <ul>
-                            <li>FDA/EMA guidance tracking</li>
-                            <li>Competitive landscape analysis</li>
-                            <li>Site selection optimization</li>
-                            <li>ROI calculators</li>
-                        </ul>
-                        <button class="btn btn--primary">Access Dashboard</button>
-                    </div>
-                    
-                    <div class="stakeholder-card" data-role="physicians">
-                        <div class="card-icon">👨‍⚕️</div>
-                        <h3>Physicians & Clinicians</h3>
-                        <p>Patient-trial matching and clinical workflow integration</p>
-                        <ul>
-                            <li>AI-powered patient matching</li>
-                            <li>One-click referral system</li>
-                            <li>CME credit tracking</li>
-                            <li>Mobile-optimized interface</li>
-                        </ul>
-                        <button class="btn btn--primary">Access Dashboard</button>
-                    </div>
-                    
-                    <div class="stakeholder-card" data-role="cros">
-                        <div class="card-icon">📊</div>
-                        <h3>Clinical Research Organizations</h3>
-                        <p>Site analytics, enrollment tracking, and business intelligence</p>
-                        <ul>
-                            <li>Site performance analytics</li>
-                            <li>Enrollment predictions</li>
-                            <li>Budget forecasting</li>
-                            <li>Quality assurance</li>
-                        </ul>
-                        <button class="btn btn--primary">Access Dashboard</button>
-                    </div>
-                </div>
+    <!-- Navigation Header -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <h2>Clinical Research Intel</h2>
+            </div>
+            <div class="nav-menu">
+                <button class="btn btn--outline nav-toggle" id="stakeholder-selector">
+                    <span id="current-stakeholder">Select Your Role</span>
+                    <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
             </div>
         </div>
-    </div>
+    </nav>
 
-    <!-- Main Application -->
-    <div id="main-app" class="main-app hidden">
-        <!-- Navigation Header -->
-        <header class="app-header">
-            <div class="header-content">
-                <div class="header-left">
-                    <h1 class="app-title">ClinicalIntel Pro</h1>
-                    <div class="user-role-badge">
-                        <span id="current-role-text">Pharmaceutical</span>
-                    </div>
-                </div>
-                <div class="header-right">
-                    <div class="header-actions">
-                        <button class="btn btn--outline btn--sm" id="real-time-toggle">
-                            <span class="status-indicator active"></span>
-                            Real-time Data
-                        </button>
-                        <button class="btn btn--outline btn--sm" id="export-data">Export</button>
-                        <button class="btn btn--secondary btn--sm" id="change-role">Switch Role</button>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        <!-- Dashboard Content -->
-        <main class="dashboard-main">
-            <div class="container">
-                <!-- Dashboard Metrics -->
-                <div class="metrics-grid" id="dashboard-metrics">
-                    <!-- Metrics will be populated by JavaScript -->
-                </div>
-
-                <!-- Role-Specific Content -->
-                <div class="dashboard-content">
-                    
-                    <!-- Pharmaceutical Dashboard -->
-                    <div id="pharmaceutical-dashboard" class="role-dashboard hidden">
-                        <div class="dashboard-grid">
-                            <div class="dashboard-section">
-                                <div class="card">
-                                    <div class="card__body">
-                                        <h3>Regulatory Intelligence Hub</h3>
-                                        <div class="regulatory-updates" id="regulatory-updates">
-                                            <!-- Updates populated by JS -->
-                                        </div>
-                                        <button class="btn btn--primary btn--sm">View All Updates</button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="dashboard-section">
-                                <div class="card">
-                                    <div class="card__body">
-                                        <h3>Competitive Landscape</h3>
-                                        <div class="chart-container" style="position: relative; height: 300px;">
-                                            <canvas id="competitive-chart"></canvas>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="dashboard-section">
-                                <div class="card">
-                                    <div class="card__body">
-                                        <h3>Site Selection Optimizer</h3>
-                                        <div id="site-map" style="height: 400px; border-radius: var(--radius-base);"></div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="dashboard-section">
-                                <div class="card">
-                                    <div class="card__body">
-                                        <h3>ROI Calculator</h3>
-                                        <div class="roi-calculator">
-                                            <div class="form-group">
-                                                <label class="form-label">Development Phase</label>
-                                                <select class="form-control" id="roi-phase">
-                                                    <option value="phase1">Phase I</option>
-                                                    <option value="phase2">Phase II</option>
-                                                    <option value="phase3">Phase III</option>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">Market Size ($ Millions)</label>
-                                                <input type="number" class="form-control" id="roi-market-size" value="1000">
-                                            </div>
-                                            <div class="roi-result">
-                                                <h4>Projected NPV: <span id="roi-npv">$487M</span></h4>
-                                                <p>Risk-adjusted return: <span id="roi-return">15.3%</span></p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Physicians Dashboard -->
-                    <div id="physicians-dashboard" class="role-dashboard hidden">
-                        <div class="dashboard-grid">
-                            <div class="dashboard-section">
-                                <div class="card">
-                                    <div class="card__body">
-                                        <h3>Patient-Trial Matching</h3>
-                                        <div class="patient-matching-form">
-                                            <div class="form-group">
-                                                <label class="form-label">Patient Condition</label>
-                                                <input type="text" class="form-control" id="patient-condition" placeholder="e.g., Type 2 Diabetes">
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">Age</label>
-                                                <input type="number" class="form-control" id="patient-age" placeholder="Patient age">
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">Location</label>
-                                                <input type="text" class="form-control" id="patient-location" placeholder="City, State">
-                                            </div>
-                                            <button class="btn btn--primary" id="find-trials">Find Matching Trials</button>
-                                        </div>
-                                        <div class="trial-matches" id="trial-matches">
-                                            <!-- Matches populated by JS -->
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="dashboard-section">
-                                <div class="card">
-                                    <div class="card__body">
-                                        <h3>Referral Management</h3>
-                                        <div class="referral-stats">
-                                            <div class="stat-item">
-                                                <h4>34</h4>
-                                                <p>Referrals Sent</p>
-                                            </div>
-                                            <div class="stat-item">
-                                                <h4>28</h4>
-                                                <p>Patients Enrolled</p>
-                                            </div>
-                                            <div class="stat-item">
-                                                <h4>82%</h4>
-                                                <p>Success Rate</p>
-                                            </div>
-                                        </div>
-                                        <button class="btn btn--outline">Generate Referral</button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="dashboard-section">
-                                <div class="card">
-                                    <div class="card__body">
-                                        <h3>CME Tracking</h3>
-                                        <div class="cme-progress">
-                                            <div class="progress-bar">
-                                                <div class="progress-fill" style="width: 65%"></div>
-                                            </div>
-                                            <p>12.5 of 20 credits completed</p>
-                                        </div>
-                                        <div class="cme-activities">
-                                            <div class="activity-item">
-                                                <span>Clinical Trial Design Webinar</span>
-                                                <span class="cme-credits">2.5 credits</span>
-                                            </div>
-                                            <div class="activity-item">
-                                                <span>Patient Safety in Research</span>
-                                                <span class="cme-credits">3.0 credits</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="dashboard-section">
-                                <div class="card">
-                                    <div class="card__body">
-                                        <h3>Practice Analytics</h3>
-                                        <div class="chart-container" style="position: relative; height: 250px;">
-                                            <canvas id="practice-chart"></canvas>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- CRO Dashboard -->
-                    <div id="cros-dashboard" class="role-dashboard hidden">
-                        <div class="dashboard-grid">
-                            <div class="dashboard-section">
-                                <div class="card">
-                                    <div class="card__body">
-                                        <h3>Site Performance Analytics</h3>
-                                        <div class="chart-container" style="position: relative; height: 300px;">
-                                            <canvas id="site-performance-chart"></canvas>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="dashboard-section">
-                                <div class="card">
-                                    <div class="card__body">
-                                        <h3>Enrollment Predictions</h3>
-                                        <div class="prediction-models">
-                                            <div class="model-result">
-                                                <h4>Current Trajectory</h4>
-                                                <p>Target: 500 patients by Dec 2025</p>
-                                                <p>Predicted: 487 patients (97.4% of target)</p>
-                                                <div class="confidence-score">
-                                                    <span>Confidence: 89%</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="chart-container" style="position: relative; height: 200px;">
-                                            <canvas id="enrollment-prediction-chart"></canvas>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="dashboard-section">
-                                <div class="card">
-                                    <div class="card__body">
-                                        <h3>Budget Analysis</h3>
-                                        <div class="budget-overview">
-                                            <div class="budget-item">
-                                                <span>Total Budget</span>
-                                                <span class="budget-amount">$2.4M</span>
-                                            </div>
-                                            <div class="budget-item">
-                                                <span>Utilized</span>
-                                                <span class="budget-amount">$2.09M (87%)</span>
-                                            </div>
-                                            <div class="budget-item">
-                                                <span>Remaining</span>
-                                                <span class="budget-amount">$310K</span>
-                                            </div>
-                                        </div>
-                                        <div class="chart-container" style="position: relative; height: 200px;">
-                                            <canvas id="budget-chart"></canvas>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="dashboard-section">
-                                <div class="card">
-                                    <div class="card__body">
-                                        <h3>Quality Assurance</h3>
-                                        <div class="quality-metrics">
-                                            <div class="quality-item">
-                                                <span>Data Quality Score</span>
-                                                <span class="quality-score success">96%</span>
-                                            </div>
-                                            <div class="quality-item">
-                                                <span>GCP Compliance</span>
-                                                <span class="quality-score success">98%</span>
-                                            </div>
-                                            <div class="quality-item">
-                                                <span>Protocol Deviations</span>
-                                                <span class="quality-score warning">23</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <!-- Notification System -->
-    <div id="notification-container" class="notification-container"></div>
-
-    <!-- Modal for Data Export -->
-    <div id="export-modal" class="modal hidden">
+    <!-- Stakeholder Selection Modal -->
+    <div class="modal hidden" id="stakeholder-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Export Data</h3>
-                <button class="modal-close" id="close-export-modal">&times;</button>
+                <h3>Select Your Role</h3>
+                <button class="modal-close" id="close-modal">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label class="form-label">Export Format</label>
-                    <select class="form-control" id="export-format">
-                        <option value="pdf">PDF Report</option>
-                        <option value="excel">Excel Spreadsheet</option>
-                        <option value="csv">CSV Data</option>
-                    </select>
+                <div class="stakeholder-grid">
+                    <div class="stakeholder-card" data-stakeholder="physician">
+                        <div class="stakeholder-icon">👩‍⚕️</div>
+                        <h4>Physicians & Clinical Practitioners</h4>
+                        <p>Patient-trial matching and clinical workflow tools</p>
+                        <button class="btn btn--primary">Select</button>
+                    </div>
+                    <div class="stakeholder-card" data-stakeholder="pharma">
+                        <div class="stakeholder-icon">🏢</div>
+                        <h4>Pharmaceutical Companies</h4>
+                        <p>Regulatory intelligence and competitive analysis</p>
+                        <button class="btn btn--primary">Select</button>
+                    </div>
+                    <div class="stakeholder-card" data-stakeholder="cro">
+                        <div class="stakeholder-icon">📊</div>
+                        <h4>Clinical Research Organizations</h4>
+                        <p>Site performance analytics and study management</p>
+                        <button class="btn btn--primary">Select</button>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Date Range</label>
-                    <input type="date" class="form-control" id="export-start-date">
-                    <input type="date" class="form-control" id="export-end-date">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn--outline" id="cancel-export">Cancel</button>
-                <button class="btn btn--primary" id="confirm-export">Export Data</button>
             </div>
         </div>
     </div>
 
-    <script src="app.js"></script>
-</body>
-</html>
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Welcome Section -->
+        <section class="welcome-section" id="welcome-section">
+            <div class="welcome-container">
+                <h1>Clinical Research Intelligence Platform</h1>
+                <p class="welcome-subtitle">AI-powered platform connecting pharma companies, physicians, and CROs for more efficient clinical trials</p>
+                <div class="welcome-stats">
+                    <div class="stat-item">
+                        <div class="stat-number">2.6B+</div>
+                        <div class="stat-label">Cost per failed trial</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">90%</div>
+                        <div class="stat-label">Trial failure rate</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">40%</div>
+                        <div class="stat-label">Recruitment delays</div>
+                    </div>
+                </div>
+                <button class="btn btn--primary btn--large" id="get-started-btn">Get Started</button>
+            </div>
+        </section>
+
+        <!-- Physician Dashboard -->
+        <section class="dashboard-section hidden" id="physician-dashboard">
+            <div class="dashboard-container">
+                <div class="dashboard-header">
+                    <h2>Physician Dashboard</h2>
+                    <p>Find the right clinical trials for your patients</p>
+                </div>
+                
+                <div class="physician-dashboard">
+                    <h3>Patient-Trial Matching</h3>
+                    <form id="patient-matching-form" class="matching-form">
+                        <div class="form-group">
+                            <label>Patient Condition</label>
+                            <select id="patient-condition" required>
+                                <option value="">Select condition...</option>
+                                <option value="coronary-artery-disease">Coronary Artery Disease</option>
+                                <option value="heart-failure">Heart Failure</option>
+                                <option value="diabetes">Type 2 Diabetes</option>
+                                <option value="cancer">Cancer</option>
+                                <option value="alzheimers">Alzheimer's Disease</option>
+                                <option value="hypertension">Hypertension</option>
+                                <option value="copd">COPD</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Patient Age</label>
+                            <input type="number" id="patient-age" min="18" max="100" placeholder="e.g., 65" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Patient Location (Zip Code)</label>
+                            <input type="text" id="patient-location" placeholder="e.g., 10001" required>
+                        </div>
+                        <button type="submit" class="btn btn--primary">Find Matching Trials</button>
+                    </form>
+                    
+                    <div id="trial-results" class="trial-results hidden">
+                        <h3>Matching Clinical Trials</h3>
+                        <div id="results-container"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pharma Dashboard -->
+        <section class="dashboard-section hidden" id="pharma-dashboard">
+            <div class="dashboard-container">
+                <div class="dashboard-header">
+                    <h2>Pharmaceutical Intelligence</h2>
+                    <p>Regulatory insights and competitive analysis</p>
+                </div>
+                
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <h3>📋 Regulatory Intelligence</h3>
+                        <div id="fda-guidance">
+                            <div class="guidance-item">
+                                <div class="guidance-header">
+                                    <h4>FDA Cybersecurity Guidelines Update</h4>
+                                    <span class="status status--high">High Priority</span>
+                                </div>
+                                <p>New requirements for medical device cybersecurity - Action required by Q4 2025</p>
+                                <div class="guidance-actions">
+                                    <button class="btn btn--sm btn--outline">View Details</button>
+                                    <button class="btn btn--sm btn--primary">Create Task</button>
+                                </div>
+                            </div>
+                            <div class="guidance-item">
+                                <h4>AI/ML Device Framework</h4>
+                                <span class="status status--medium">Medium Priority</span>
+                                <p>Updated guidance for AI-based medical devices</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <h3>🏢 Competitive Landscape</h3>
+                        <div id="competitive-analysis">
+                            <div class="competitor-item">
+                                <h4>Competitor Trial Launch</h4>
+                                <p>Boston Scientific launches Phase III cardiovascular trial - 2,400 patient enrollment</p>
+                                <span class="impact-badge impact--high">High Impact</span>
+                            </div>
+                            <div class="competitor-item">
+                                <h4>Market Entry</h4>
+                                <p>New biotech IPO in immunotherapy space - $200M raised</p>
+                                <span class="impact-badge impact--medium">Medium Impact</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <h3>💰 ROI Calculator</h3>
+                        <div id="roi-calculator">
+                            <div class="roi-inputs">
+                                <div class="input-group">
+                                    <label>Development Investment ($M)</label>
+                                    <input type="number" id="roi-investment" placeholder="50" value="50">
+                                </div>
+                                <div class="input-group">
+                                    <label>Time Saved (months)</label>
+                                    <input type="number" id="roi-time-saved" placeholder="6" value="6">
+                                </div>
+                                <button class="btn btn--primary" onclick="calculateROI()">Calculate ROI</button>
+                            </div>
+                            <div id="roi-results" class="roi-results hidden">
+                                <div class="roi-metric">
+                                    <span class="roi-label">ROI:</span>
+                                    <span class="roi-value" id="roi-percentage">-</span>
+                                </div>
+                                <div class="roi-metric">
+                                    <span class="roi-label">Payback Period:</span>
+                                    <span class="roi-value" id="roi-payback">-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CRO Dashboard -->
+        <section class="dashboard-section hidden" id="cro-dashboard">
+            <div class="dashboard-container">
+                <div class="dashboard-header">
+                    <h2>CRO Analytics</h2>
+                    <p>Site performance and enrollment intelligence</p>
+                </div>
+                
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <h3>📊 Site Performance</h3>
+                        <div id="site-metrics">
+                            <div class="metric-row">
+                                <div class="metric-item">
+                                    <div class="metric-number">8.5</div>
+                                    <div class="metric-label">Avg Enrollment/Month</div>
+                                </div>
+                                <div class="metric-item">
+                                    <div class="metric-number">92%</div>
+                                    <div class="metric-label">Retention Rate</div>
+                                </div>
+                            </div>
+                            <div class="site-list">
+                                <div class="site-item">
+                                    <div class="site-info">
+                                        <h4>Metro Medical Center</h4>
+                                        <p>New York, NY • 12 active trials</p>
+                                    </div>
+                                    <div class="site-performance">
+                                        <span class="performance-badge performance--excellent">Excellent</span>
+                                    </div>
+                                </div>
+                                <div class="site-item">
+                                    <div class="site-info">
+                                        <h4>West Coast Research</h4>
+                                        <p>Los Angeles, CA • 8 active trials</p>
+                                    </div>
+                                    <div class="site-performance">
+                                        <span class="performance-badge performance--good">Good</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
