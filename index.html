@@ -6,6 +6,7 @@
     <title>Clinical Research Intelligence Platform</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.0/axios.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -40,19 +41,19 @@
                     <div class="stakeholder-card" data-stakeholder="physician">
                         <div class="stakeholder-icon">👩‍⚕️</div>
                         <h4>Physicians & Clinical Practitioners</h4>
-                        <p>Patient-trial matching and clinical workflow tools</p>
+                        <p>EMR integration, patient matching, and clinical workflow tools</p>
                         <button class="btn btn--primary">Select</button>
                     </div>
                     <div class="stakeholder-card" data-stakeholder="pharma">
                         <div class="stakeholder-icon">🏢</div>
                         <h4>Pharmaceutical Companies</h4>
-                        <p>Regulatory intelligence and competitive analysis</p>
+                        <p>Drug development pipeline, regulatory guidance, and competitive intelligence</p>
                         <button class="btn btn--primary">Select</button>
                     </div>
                     <div class="stakeholder-card" data-stakeholder="cro">
                         <div class="stakeholder-icon">📊</div>
                         <h4>Clinical Research Organizations</h4>
-                        <p>Site performance analytics and study management</p>
+                        <p>Trial analytics, competitive analysis, and intelligent querying</p>
                         <button class="btn btn--primary">Select</button>
                     </div>
                 </div>
@@ -66,22 +67,22 @@
         <section class="welcome-section" id="welcome-section">
             <div class="welcome-container">
                 <h1>Clinical Research Intelligence Platform</h1>
-                <p class="welcome-subtitle">AI-powered platform connecting pharma companies, physicians, and CROs for more efficient clinical trials</p>
+                <p class="welcome-subtitle">Real-time AI-powered platform with live data integration and machine learning analysis</p>
                 <div class="welcome-stats">
                     <div class="stat-item">
-                        <div class="stat-number">2.6B+</div>
-                        <div class="stat-label">Cost per failed trial</div>
+                        <div class="stat-number">$2.6B</div>
+                        <div class="stat-label">Average cost per failed drug</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-number">90%</div>
-                        <div class="stat-label">Trial failure rate</div>
+                        <div class="stat-label">Clinical trial failure rate</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-number">40%</div>
-                        <div class="stat-label">Recruitment delays</div>
+                        <div class="stat-number">80%</div>
+                        <div class="stat-label">Trials with enrollment delays</div>
                     </div>
                 </div>
-                <button class="btn btn--primary btn--large" id="get-started-btn">Get Started</button>
+                <button class="btn btn--primary btn--large" id="get-started-btn">Start Analysis</button>
             </div>
         </section>
 
@@ -89,41 +90,84 @@
         <section class="dashboard-section hidden" id="physician-dashboard">
             <div class="dashboard-container">
                 <div class="dashboard-header">
-                    <h2>Physician Dashboard</h2>
-                    <p>Find the right clinical trials for your patients</p>
+                    <h2>Physician Dashboard - EMR Integration & Patient Matching</h2>
+                    <p>Connect your EMR system and automatically match patients to clinical trials</p>
                 </div>
                 
-                <div class="physician-dashboard">
-                    <h3>Patient-Trial Matching</h3>
-                    <form id="patient-matching-form" class="matching-form">
-                        <div class="form-group">
-                            <label>Patient Condition</label>
-                            <select id="patient-condition" required>
-                                <option value="">Select condition...</option>
-                                <option value="coronary-artery-disease">Coronary Artery Disease</option>
-                                <option value="heart-failure">Heart Failure</option>
-                                <option value="diabetes">Type 2 Diabetes</option>
-                                <option value="cancer">Cancer</option>
-                                <option value="alzheimers">Alzheimer's Disease</option>
-                                <option value="hypertension">Hypertension</option>
-                                <option value="copd">COPD</option>
-                            </select>
+                <!-- EMR Integration Section -->
+                <div class="card">
+                    <h3>🏥 EMR System Integration</h3>
+                    <div id="emr-integration">
+                        <div class="emr-connection" id="emr-connection">
+                            <h4>Connect Your EMR System</h4>
+                            <div class="emr-options">
+                                <button class="btn btn--outline emr-btn" data-emr="epic" onclick="app.connectEMR('epic')">
+                                    <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSI+PHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSIjMDA3Y2JhIi8+PHRleHQgeD0iMTIiIHk9IjE1IiBmaWxsPSJ3aGl0ZSIgZm9udC1zaXplPSIxMCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+RTwvdGV4dD48L3N2Zz4=" alt="Epic" />
+                                    Epic MyChart
+                                </button>
+                                <button class="btn btn--outline emr-btn" data-emr="cerner" onclick="app.connectEMR('cerner')">
+                                    <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSI+PHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSIjZmY2YjM1Ii8+PHRleHQgeD0iMTIiIHk9IjE1IiBmaWxsPSJ3aGl0ZSIgZm9udC1zaXplPSIxMCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QzwvdGV4dD48L3N2Zz4=" alt="Cerner" />
+                                    Cerner PowerChart
+                                </button>
+                                <button class="btn btn--outline emr-btn" data-emr="allscripts" onclick="app.connectEMR('allscripts')">
+                                    <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSI+PHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSIjMDA2ZTU0Ii8+PHRleHQgeD0iMTIiIHk9IjE1IiBmaWxsPSJ3aGl0ZSIgZm9udC1zaXplPSIxMCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QTwvdGV4dD48L3N2Zz4=" alt="Allscripts" />
+                                    Allscripts
+                                </button>
+                            </div>
+                            <div class="emr-auth-form hidden" id="emr-auth-form">
+                                <h4>EMR Authentication</h4>
+                                <div class="form-group">
+                                    <label>EMR System URL</label>
+                                    <input type="url" id="emr-url" placeholder="https://your-emr-system.com/api" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Client ID</label>
+                                    <input type="text" id="emr-client-id" placeholder="Your FHIR Client ID" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Access Token</label>
+                                    <input type="password" id="emr-token" placeholder="Your API Access Token" required>
+                                </div>
+                                <div class="form-actions">
+                                    <button class="btn btn--primary" onclick="app.authenticateEMR()">Connect EMR</button>
+                                    <button class="btn btn--outline" onclick="app.testConnection()">Test Connection</button>
+                                </div>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>Patient Age</label>
-                            <input type="number" id="patient-age" min="18" max="100" placeholder="e.g., 65" required>
+                        
+                        <div class="emr-status hidden" id="emr-status">
+                            <div class="connection-status">
+                                <h4>✅ EMR Connected Successfully</h4>
+                                <p>Connected to: <span id="connected-emr-name"></span></p>
+                                <p>Last sync: <span id="last-sync-time"></span></p>
+                                <button class="btn btn--outline" onclick="app.syncPatients()">Sync Patients</button>
+                                <button class="btn btn--secondary" onclick="app.disconnectEMR()">Disconnect</button>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>Patient Location (Zip Code)</label>
-                            <input type="text" id="patient-location" placeholder="e.g., 10001" required>
-                        </div>
-                        <button type="submit" class="btn btn--primary">Find Matching Trials</button>
-                    </form>
-                    
-                    <div id="trial-results" class="trial-results hidden">
-                        <h3>Matching Clinical Trials</h3>
-                        <div id="results-container"></div>
                     </div>
+                </div>
+
+                <!-- Patient List Section -->
+                <div class="card">
+                    <h3>👥 Patient List & Trial Matching</h3>
+                    <div class="patient-search">
+                        <input type="text" id="patient-search" placeholder="Search patients by name, condition, or ID..." />
+                        <button class="btn btn--primary" onclick="app.searchPatients()">Search</button>
+                        <button class="btn btn--outline" onclick="app.loadAllPatients()">Load All Patients</button>
+                    </div>
+                    
+                    <div id="patient-list" class="patient-list">
+                        <div class="loading-patients">
+                            <p>Connect your EMR system to load patient data</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trial Matching Results -->
+                <div class="card hidden" id="trial-matching-section">
+                    <h3>🎯 Clinical Trial Matches</h3>
+                    <div id="selected-patient-info"></div>
+                    <div id="trial-matches"></div>
                 </div>
             </div>
         </section>
@@ -132,73 +176,112 @@
         <section class="dashboard-section hidden" id="pharma-dashboard">
             <div class="dashboard-container">
                 <div class="dashboard-header">
-                    <h2>Pharmaceutical Intelligence</h2>
-                    <p>Regulatory insights and competitive analysis</p>
+                    <h2>Pharmaceutical Intelligence & Development Pipeline</h2>
+                    <p>AI-powered drug development guidance, regulatory framework assistance, and competitive intelligence</p>
                 </div>
                 
-                <div class="dashboard-grid">
-                    <div class="card">
-                        <h3>📋 Regulatory Intelligence</h3>
-                        <div id="fda-guidance">
-                            <div class="guidance-item">
-                                <div class="guidance-header">
-                                    <h4>FDA Cybersecurity Guidelines Update</h4>
-                                    <span class="status status--high">High Priority</span>
-                                </div>
-                                <p>New requirements for medical device cybersecurity - Action required by Q4 2025</p>
-                                <div class="guidance-actions">
-                                    <button class="btn btn--sm btn--outline">View Details</button>
-                                    <button class="btn btn--sm btn--primary">Create Task</button>
-                                </div>
+                <!-- Drug Development Input -->
+                <div class="card">
+                    <h3>💊 Drug Development Information</h3>
+                    <form id="drug-dev-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Drug/Compound Name</label>
+                                <input type="text" id="drug-name" placeholder="e.g., ABC-123, CompoundX" required>
                             </div>
-                            <div class="guidance-item">
-                                <h4>AI/ML Device Framework</h4>
-                                <span class="status status--medium">Medium Priority</span>
-                                <p>Updated guidance for AI-based medical devices</p>
+                            <div class="form-group">
+                                <label>Therapeutic Area</label>
+                                <select id="therapeutic-area" required>
+                                    <option value="">Select therapeutic area...</option>
+                                    <option value="oncology">Oncology</option>
+                                    <option value="cardiovascular">Cardiovascular</option>
+                                    <option value="neurology">Neurology</option>
+                                    <option value="diabetes">Diabetes/Endocrinology</option>
+                                    <option value="respiratory">Respiratory</option>
+                                    <option value="immunology">Immunology</option>
+                                    <option value="infectious-disease">Infectious Disease</option>
+                                    <option value="rare-disease">Rare Disease</option>
+                                </select>
                             </div>
-                        </div>
-                    </div>
-                    
-                    <div class="card">
-                        <h3>🏢 Competitive Landscape</h3>
-                        <div id="competitive-analysis">
-                            <div class="competitor-item">
-                                <h4>Competitor Trial Launch</h4>
-                                <p>Boston Scientific launches Phase III cardiovascular trial - 2,400 patient enrollment</p>
-                                <span class="impact-badge impact--high">High Impact</span>
-                            </div>
-                            <div class="competitor-item">
-                                <h4>Market Entry</h4>
-                                <p>New biotech IPO in immunotherapy space - $200M raised</p>
-                                <span class="impact-badge impact--medium">Medium Impact</span>
+                            <div class="form-group">
+                                <label>Current Phase</label>
+                                <select id="current-phase" required>
+                                    <option value="">Select current phase...</option>
+                                    <option value="preclinical">Preclinical</option>
+                                    <option value="phase-1">Phase I</option>
+                                    <option value="phase-2">Phase II</option>
+                                    <option value="phase-3">Phase III</option>
+                                    <option value="registration">Registration</option>
+                                </select>
                             </div>
                         </div>
-                    </div>
-                    
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Target Indication</label>
+                                <input type="text" id="target-indication" placeholder="e.g., Non-small cell lung cancer, Heart failure" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Mechanism of Action</label>
+                                <input type="text" id="mechanism-action" placeholder="e.g., PD-1 inhibitor, ACE inhibitor" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Development Budget ($M)</label>
+                                <input type="number" id="dev-budget" placeholder="50" min="1" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Target Market Launch</label>
+                                <input type="date" id="target-launch" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Risk Tolerance</label>
+                                <select id="risk-tolerance" required>
+                                    <option value="">Select risk level...</option>
+                                    <option value="low">Low - Conservative approach</option>
+                                    <option value="medium">Medium - Balanced approach</option>
+                                    <option value="high">High - Aggressive timeline</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn--primary btn--large">Generate Development Plan & Analysis</button>
+                    </form>
+                </div>
+
+                <!-- Live Results Sections -->
+                <div class="results-grid hidden" id="pharma-results">
+                    <!-- Regulatory Guidance & Forms -->
                     <div class="card">
-                        <h3>💰 ROI Calculator</h3>
-                        <div id="roi-calculator">
-                            <div class="roi-inputs">
-                                <div class="input-group">
-                                    <label>Development Investment ($M)</label>
-                                    <input type="number" id="roi-investment" placeholder="50" value="50">
-                                </div>
-                                <div class="input-group">
-                                    <label>Time Saved (months)</label>
-                                    <input type="number" id="roi-time-saved" placeholder="6" value="6">
-                                </div>
-                                <button class="btn btn--primary" onclick="calculateROI()">Calculate ROI</button>
-                            </div>
-                            <div id="roi-results" class="roi-results hidden">
-                                <div class="roi-metric">
-                                    <span class="roi-label">ROI:</span>
-                                    <span class="roi-value" id="roi-percentage">-</span>
-                                </div>
-                                <div class="roi-metric">
-                                    <span class="roi-label">Payback Period:</span>
-                                    <span class="roi-value" id="roi-payback">-</span>
-                                </div>
-                            </div>
+                        <h3>📋 Regulatory Guidance & Form Generation</h3>
+                        <div id="regulatory-guidance" class="loading-content">
+                            <div class="spinner">Analyzing regulatory requirements...</div>
+                        </div>
+                    </div>
+
+                    <!-- Development Timeline -->
+                    <div class="card">
+                        <h3>📅 AI-Generated Development Timeline</h3>
+                        <div id="development-timeline" class="loading-content">
+                            <div class="spinner">Creating optimized timeline...</div>
+                        </div>
+                    </div>
+
+                    <!-- Competitive Landscape -->
+                    <div class="card">
+                        <h3>🏢 Live Competitive Intelligence</h3>
+                        <div id="competitive-landscape" class="loading-content">
+                            <div class="spinner">Searching competitive landscape...</div>
+                        </div>
+                    </div>
+
+                    <!-- Enhanced ROI Analysis -->
+                    <div class="card">
+                        <h3>💰 Advanced ROI Analysis</h3>
+                        <div id="roi-analysis" class="loading-content">
+                            <div class="spinner">Calculating financial projections...</div>
                         </div>
                     </div>
                 </div>
@@ -209,51 +292,111 @@
         <section class="dashboard-section hidden" id="cro-dashboard">
             <div class="dashboard-container">
                 <div class="dashboard-header">
-                    <h2>CRO Analytics</h2>
-                    <p>Site performance and enrollment intelligence</p>
+                    <h2>CRO Analytics & Intelligence Platform</h2>
+                    <p>Real-time trial analytics, competitive intelligence, and AI-powered insights</p>
                 </div>
-                
-                <div class="dashboard-grid">
-                    <div class="card">
-                        <h3>📊 Site Performance</h3>
-                        <div id="site-metrics">
-                            <div class="metric-row">
-                                <div class="metric-item">
-                                    <div class="metric-number">8.5</div>
-                                    <div class="metric-label">Avg Enrollment/Month</div>
-                                </div>
-                                <div class="metric-item">
-                                    <div class="metric-number">92%</div>
-                                    <div class="metric-label">Retention Rate</div>
-                                </div>
+
+                <!-- CRO Information Input -->
+                <div class="card">
+                    <h3>🏢 CRO Information & Trial Data Upload</h3>
+                    <form id="cro-info-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>CRO Company Name</label>
+                                <input type="text" id="cro-name" placeholder="Your CRO company name" required>
                             </div>
-                            <div class="site-list">
-                                <div class="site-item">
-                                    <div class="site-info">
-                                        <h4>Metro Medical Center</h4>
-                                        <p>New York, NY • 12 active trials</p>
-                                    </div>
-                                    <div class="site-performance">
-                                        <span class="performance-badge performance--excellent">Excellent</span>
-                                    </div>
-                                </div>
-                                <div class="site-item">
-                                    <div class="site-info">
-                                        <h4>West Coast Research</h4>
-                                        <p>Los Angeles, CA • 8 active trials</p>
-                                    </div>
-                                    <div class="site-performance">
-                                        <span class="performance-badge performance--good">Good</span>
-                                    </div>
-                                </div>
+                            <div class="form-group">
+                                <label>Primary Therapeutic Focus</label>
+                                <select id="cro-focus" required>
+                                    <option value="">Select primary focus...</option>
+                                    <option value="oncology">Oncology</option>
+                                    <option value="cardiovascular">Cardiovascular</option>
+                                    <option value="neurology">Neurology</option>
+                                    <option value="multi-therapeutic">Multi-therapeutic</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Geographic Coverage</label>
+                                <select id="cro-geography" required>
+                                    <option value="">Select coverage...</option>
+                                    <option value="us-only">US Only</option>
+                                    <option value="north-america">North America</option>
+                                    <option value="global">Global</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn--primary">Initialize CRO Analysis</button>
+                    </form>
+                    
+                    <!-- Trial Data Upload -->
+                    <div class="data-upload-section" id="trial-data-upload">
+                        <h4>📊 Upload Your Trial Data</h4>
+                        <div class="upload-options">
+                            <div class="upload-method">
+                                <h5>CSV/Excel Upload</h5>
+                                <input type="file" id="trial-data-file" accept=".csv,.xlsx,.xls" multiple>
+                                <button class="btn btn--outline" onclick="app.uploadTrialData()">Upload Files</button>
+                            </div>
+                            <div class="upload-method">
+                                <h5>Manual Trial Entry</h5>
+                                <button class="btn btn--outline" onclick="app.showTrialEntryForm()">Enter Trial Data</button>
+                            </div>
+                            <div class="upload-method">
+                                <h5>API Integration</h5>
+                                <button class="btn btn--outline" onclick="app.setupAPIIntegration()">Connect Trial Database</button>
                             </div>
                         </div>
                     </div>
-                    
+                </div>
+
+                <!-- Smart Query Interface -->
+                <div class="card">
+                    <h3>🤖 AI-Powered Trial Analytics Query</h3>
+                    <div class="smart-query-interface">
+                        <div class="query-input">
+                            <textarea id="smart-query" placeholder="Ask intelligent questions about your trials and competitive landscape, e.g.:&#10;• 'Compare our cardiovascular trial enrollment rates to industry benchmarks'&#10;• 'What are the competitive threats for our Phase II oncology studies?'&#10;• 'Predict enrollment completion for trials in the Northeast region'&#10;• 'Analyze budget variance across therapeutic areas'"></textarea>
+                            <div class="query-actions">
+                                <button class="btn btn--primary" onclick="app.executeSmartQuery()">Analyze with AI</button>
+                                <button class="btn btn--outline" onclick="app.clearQuery()">Clear</button>
+                            </div>
+                        </div>
+                        <div class="suggested-queries">
+                            <h5>Suggested Queries:</h5>
+                            <div class="query-tags">
+                                <span class="query-tag" onclick="app.setQuery('enrollment-performance')">Enrollment Performance Analysis</span>
+                                <span class="query-tag" onclick="app.setQuery('competitive-benchmark')">Competitive Benchmarking</span>
+                                <span class="query-tag" onclick="app.setQuery('budget-variance')">Budget Variance Analysis</span>
+                                <span class="query-tag" onclick="app.setQuery('risk-assessment')">Risk Assessment</span>
+                                <span class="query-tag" onclick="app.setQuery('market-trends')">Market Trend Analysis</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Real-time Analytics Results -->
+                <div class="results-grid hidden" id="cro-results">
+                    <!-- Query Results -->
                     <div class="card">
-                        <h3>📈 Enrollment Tracking</h3>
-                        <div id="enrollment-charts">
-                            <canvas id="enrollmentChart" width="400" height="200"></canvas>
+                        <h3>📈 AI Analysis Results</h3>
+                        <div id="query-results" class="query-results-container">
+                            <!-- Results will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Live Competitive Intelligence -->
+                    <div class="card">
+                        <h3>🔍 Live Competitive Intelligence</h3>
+                        <div id="competitive-intel" class="competitive-intel-container">
+                            <!-- Competitive analysis will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Trial Performance Dashboard -->
+                    <div class="card">
+                        <h3>📊 Trial Performance Dashboard</h3>
+                        <div id="trial-dashboard">
+                            <canvas id="performance-chart" width="400" height="200"></canvas>
                         </div>
                     </div>
                 </div>
