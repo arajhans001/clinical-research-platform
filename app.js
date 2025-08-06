@@ -1,1156 +1,333 @@
-// ClinicalIntel Pro - Production-Ready Clinical Research Intelligence Platform
-// Comprehensive JavaScript Application with ML Capabilities and Real-time Data Integration
-
-class ClinicalIntelPlatform {
+// Clinical Research Intelligence Platform - Main Application
+class ClinicalResearchApp {
     constructor() {
-        this.currentRole = null;
-        this.realTimeEnabled = true;
-        this.mlModels = {};
-        this.dataCache = new Map();
+        this.currentStakeholder = null;
         this.charts = {};
-        this.notifications = [];
-        
-        // Initialize application data
-        this.initializeData();
-        
-        // Start application
         this.init();
     }
 
-    initializeData() {
-        // Core application data from the provided JSON
-        this.stakeholderTypes = [
-            {
-                id: "pharmaceutical",
-                name: "Pharmaceutical Companies",
-                description: "Drug developers and pharmaceutical corporations",
-                primary_features: ["regulatory_intelligence", "competitive_analysis", "site_selection", "roi_calculator"],
-                dashboard_cards: [
-                    {title: "Active Trials", value: "2,847", trend: "+12%", color: "blue"},
-                    {title: "FDA Approvals (YTD)", value: "42", trend: "+8%", color: "green"},
-                    {title: "Market Cap Impact", value: "$1.2B", trend: "+15%", color: "purple"},
-                    {title: "Competitive Threats", value: "17", trend: "-5%", color: "orange"}
-                ]
-            },
-            {
-                id: "physicians",
-                name: "Physicians & Clinicians",
-                description: "Healthcare providers and clinical practitioners",
-                primary_features: ["patient_matching", "referral_system", "education_materials", "cme_tracking"],
-                dashboard_cards: [
-                    {title: "Eligible Trials", value: "156", trend: "+23%", color: "green"},
-                    {title: "Patient Matches", value: "89", trend: "+18%", color: "blue"},
-                    {title: "Referrals Sent", value: "34", trend: "+42%", color: "purple"},
-                    {title: "CME Credits", value: "12.5", trend: "+2%", color: "orange"}
-                ]
-            },
-            {
-                id: "cros",
-                name: "Clinical Research Organizations",
-                description: "CROs and clinical research service providers",
-                primary_features: ["site_analytics", "enrollment_tracking", "competitive_assessment", "budget_forecasting"],
-                dashboard_cards: [
-                    {title: "Active Sites", value: "284", trend: "+7%", color: "blue"},
-                    {title: "Enrollment Rate", value: "92%", trend: "+5%", color: "green"},
-                    {title: "Budget Utilization", value: "87%", trend: "+3%", color: "purple"},
-                    {title: "Quality Score", value: "9.2", trend: "+1%", color: "orange"}
-                ]
-            }
-        ];
-
-        this.sampleTrials = [
-            {
-                id: "NCT05123456",
-                title: "Phase III Study of Novel Alzheimer's Treatment",
-                phase: "Phase III",
-                condition: "Alzheimer's Disease",
-                sponsor: "Neurogen Therapeutics",
-                status: "Recruiting",
-                locations: ["Mayo Clinic", "Johns Hopkins", "UCSF"],
-                enrollment: {current: 342, target: 500},
-                primary_endpoint: "Cognitive function improvement",
-                estimated_completion: "2025-12-31",
-                eligibility_criteria: ["Age 50-85", "Mild to moderate AD", "MMSE 10-26"],
-                distance_miles: 15.2,
-                insurance_accepted: ["Medicare", "Blue Cross", "Aetna"]
-            },
-            {
-                id: "NCT05234567",
-                title: "CAR-T Cell Therapy for Refractory Lymphoma",
-                phase: "Phase II",
-                condition: "B-cell Lymphoma",
-                sponsor: "ImmunoCore Bio",
-                status: "Active, not recruiting",
-                locations: ["MD Anderson", "Memorial Sloan Kettering", "Dana-Farber"],
-                enrollment: {current: 87, target: 90},
-                primary_endpoint: "Overall response rate",
-                estimated_completion: "2025-08-15",
-                eligibility_criteria: ["Age 18-75", "Refractory B-cell lymphoma", "ECOG 0-2"],
-                distance_miles: 28.7,
-                insurance_accepted: ["Medicare", "Private Insurance"]
-            },
-            {
-                id: "NCT05456789",
-                title: "Novel Diabetes Treatment Study",
-                phase: "Phase II",
-                condition: "Type 2 Diabetes",
-                sponsor: "EndoTech Research",
-                status: "Recruiting",
-                locations: ["Brigham and Women's Hospital", "Massachusetts General Hospital"],
-                enrollment: {current: 67, target: 120},
-                primary_endpoint: "HbA1c reduction",
-                estimated_completion: "2025-10-15",
-                eligibility_criteria: ["Age 30-70", "HbA1c 7-11%", "On metformin therapy"],
-                distance_miles: 12.5,
-                insurance_accepted: ["Medicare", "Blue Cross", "Aetna", "United Healthcare"]
-            }
-        ];
-
-        this.regulatoryUpdates = [
-            {
-                id: "fda_guidance_2024_001",
-                title: "Updated Guidance on AI/ML-Based Medical Devices",
-                agency: "FDA",
-                date: "2024-02-15",
-                impact_score: 8.5,
-                affected_areas: ["Medical Devices", "Software as Medical Device"],
-                summary: "New requirements for AI/ML algorithm transparency and validation"
-            },
-            {
-                id: "ema_guidance_2024_002",
-                title: "Digital Health Technologies in Clinical Trials",
-                agency: "EMA",
-                date: "2024-01-20",
-                impact_score: 7.2,
-                affected_areas: ["Digital Health", "Remote Monitoring"],
-                summary: "Framework for incorporating wearables and remote monitoring tools"
-            }
-        ];
-
-        this.sitePerformanceData = [
-            {
-                site_id: "SITE001",
-                name: "Mayo Clinic - Rochester",
-                location: {lat: 44.0225, lng: -92.4699},
-                performance_score: 9.2,
-                enrollment_velocity: 85.4,
-                quality_metrics: {gcp_compliance: 98, data_quality: 96, retention_rate: 94},
-                active_trials: 23,
-                therapeutic_areas: ["Oncology", "Neurology", "Cardiology"]
-            },
-            {
-                site_id: "SITE002", 
-                name: "Johns Hopkins - Baltimore",
-                location: {lat: 39.2904, lng: -76.6122},
-                performance_score: 8.9,
-                enrollment_velocity: 78.2,
-                quality_metrics: {gcp_compliance: 97, data_quality: 95, retention_rate: 91},
-                active_trials: 31,
-                therapeutic_areas: ["Immunology", "Oncology", "Rare Diseases"]
-            }
-        ];
-
-        this.competitiveIntelligence = [
-            {
-                company: "Novartis",
-                pipeline_count: 127,
-                recent_approvals: 3,
-                market_cap_change: "+12.5%",
-                key_focus_areas: ["Oncology", "Neuroscience", "Immunology"]
-            },
-            {
-                company: "Pfizer",
-                pipeline_count: 89,
-                recent_approvals: 2,
-                market_cap_change: "+8.3%",
-                key_focus_areas: ["Vaccines", "Oncology", "Inflammation"]
-            }
-        ];
+    init() {
+        this.bindEventListeners();
+        this.initializeData();
     }
 
-    async init() {
-        try {
-            // Show loading screen
-            this.showLoadingScreen();
-
-            // Initialize ML models
-            await this.initializeMLModels();
-
-            // Set up event listeners
-            this.setupEventListeners();
-
-            // Initialize PWA features
-            this.initializePWA();
-
-            // Start real-time data updates
-            this.startRealTimeUpdates();
-
-            // Hide loading screen and show welcome screen
-            setTimeout(() => {
-                this.hideLoadingScreen();
-                this.showWelcomeScreen();
-            }, 2000);
-
-        } catch (error) {
-            console.error('Initialization error:', error);
-            this.showNotification('Application initialization failed', 'error');
-        }
-    }
-
-    showLoadingScreen() {
-        document.getElementById('loading-screen').classList.remove('hidden');
-    }
-
-    hideLoadingScreen() {
-        document.getElementById('loading-screen').classList.add('hidden');
-    }
-
-    showWelcomeScreen() {
-        document.getElementById('welcome-screen').classList.remove('hidden');
-    }
-
-    hideWelcomeScreen() {
-        document.getElementById('welcome-screen').classList.add('hidden');
-    }
-
-    showMainApp() {
-        document.getElementById('main-app').classList.remove('hidden');
-    }
-
-    setupEventListeners() {
+    bindEventListeners() {
         // Stakeholder selection
+        document.getElementById('stakeholder-selector').addEventListener('click', () => {
+            document.getElementById('stakeholder-modal').classList.remove('hidden');
+        });
+
+        document.getElementById('close-modal').addEventListener('click', () => {
+            document.getElementById('stakeholder-modal').classList.add('hidden');
+        });
+
+        document.getElementById('get-started-btn').addEventListener('click', () => {
+            document.getElementById('stakeholder-modal').classList.remove('hidden');
+        });
+
+        // Stakeholder cards
         document.querySelectorAll('.stakeholder-card').forEach(card => {
             card.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const role = card.dataset.role;
-                console.log('Selected role:', role); // Debug log
-                this.selectStakeholderRole(role);
+                const stakeholder = e.currentTarget.dataset.stakeholder;
+                this.selectStakeholder(stakeholder);
             });
-
-            // Also add click listener to the button inside the card
-            const button = card.querySelector('button');
-            if (button) {
-                button.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const role = card.dataset.role;
-                    console.log('Button clicked for role:', role); // Debug log
-                    this.selectStakeholderRole(role);
-                });
-            }
         });
-
-        // Header actions
-        const realTimeToggle = document.getElementById('real-time-toggle');
-        if (realTimeToggle) {
-            realTimeToggle.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.toggleRealTime();
-            });
-        }
-
-        const exportButton = document.getElementById('export-data');
-        if (exportButton) {
-            exportButton.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.showExportModal();
-            });
-        }
-
-        const changeRoleButton = document.getElementById('change-role');
-        if (changeRoleButton) {
-            changeRoleButton.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.changeRole();
-            });
-        }
 
         // Patient matching form
-        const findTrialsButton = document.getElementById('find-trials');
-        if (findTrialsButton) {
-            findTrialsButton.addEventListener('click', (e) => {
+        const patientForm = document.getElementById('patient-matching-form');
+        if (patientForm) {
+            patientForm.addEventListener('submit', (e) => {
                 e.preventDefault();
-                this.findMatchingTrials();
+                this.handlePatientMatching();
             });
         }
 
-        // ROI Calculator
-        const roiPhaseSelect = document.getElementById('roi-phase');
-        if (roiPhaseSelect) {
-            roiPhaseSelect.addEventListener('change', () => {
-                this.calculateROI();
-            });
-        }
-
-        const roiMarketSizeInput = document.getElementById('roi-market-size');
-        if (roiMarketSizeInput) {
-            roiMarketSizeInput.addEventListener('input', () => {
-                this.calculateROI();
-            });
-        }
-
-        // Export modal
-        const closeExportModal = document.getElementById('close-export-modal');
-        if (closeExportModal) {
-            closeExportModal.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.hideExportModal();
-            });
-        }
-
-        const cancelExport = document.getElementById('cancel-export');
-        if (cancelExport) {
-            cancelExport.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.hideExportModal();
-            });
-        }
-
-        const confirmExport = document.getElementById('confirm-export');
-        if (confirmExport) {
-            confirmExport.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.exportData();
-            });
-        }
-
-        // Modal backdrop click
-        const exportModal = document.getElementById('export-modal');
-        if (exportModal) {
-            exportModal.addEventListener('click', (e) => {
-                if (e.target === exportModal) {
-                    this.hideExportModal();
-                }
-            });
-        }
-    }
-
-    async initializeMLModels() {
-        try {
-            // Simulate ML model initialization
-            this.mlModels = {
-                patientTrialMatching: {
-                    name: "Clinical Trial Eligibility Classifier",
-                    accuracy: 0.87,
-                    last_trained: "2024-01-15",
-                    features: ["age", "condition", "biomarkers", "medications", "comorbidities"],
-                    predict: (patientData) => this.predictTrialEligibility(patientData)
-                },
-                enrollmentPrediction: {
-                    name: "Site Enrollment Velocity Predictor",
-                    accuracy: 0.82,
-                    last_trained: "2024-01-10",
-                    features: ["historical_performance", "geographic_factors", "competition", "therapeutic_area"],
-                    predict: (siteData) => this.predictEnrollmentVelocity(siteData)
-                },
-                regulatoryImpact: {
-                    name: "Regulatory Change Impact Scorer",
-                    accuracy: 0.78,
-                    last_trained: "2024-01-05",
-                    features: ["document_content", "historical_precedent", "stakeholder_mentions", "timeline"],
-                    predict: (regulatoryData) => this.predictRegulatoryImpact(regulatoryData)
-                }
-            };
-
-            console.log('ML models initialized successfully');
-        } catch (error) {
-            console.error('ML model initialization failed:', error);
-        }
-    }
-
-    initializePWA() {
-        // Service Worker registration for offline functionality
-        if ('serviceWorker' in navigator) {
-            const swCode = `
-                const CACHE_NAME = 'clinicalintel-v1';
-                const urlsToCache = ['/', '/style.css', '/app.js'];
-                
-                self.addEventListener('install', event => {
-                    event.waitUntil(
-                        caches.open(CACHE_NAME)
-                            .then(cache => cache.addAll(urlsToCache))
-                    );
-                });
-                
-                self.addEventListener('fetch', event => {
-                    event.respondWith(
-                        caches.match(event.request)
-                            .then(response => response || fetch(event.request))
-                    );
-                });
-            `;
-            
-            const blob = new Blob([swCode], { type: 'application/javascript' });
-            const swUrl = URL.createObjectURL(blob);
-            
-            navigator.serviceWorker.register(swUrl)
-                .then(() => console.log('Service Worker registered'))
-                .catch(err => console.log('Service Worker registration failed'));
-        }
-    }
-
-    startRealTimeUpdates() {
-        if (!this.realTimeEnabled) return;
-
-        // Simulate real-time data updates
-        this.realTimeInterval = setInterval(() => {
-            this.updateRealTimeData();
-        }, 30000); // Update every 30 seconds
-
-        // Simulate new regulatory updates
-        this.regulatoryInterval = setInterval(() => {
-            this.checkForRegulatoryUpdates();
-        }, 60000); // Check every minute
-
-        // Update enrollment predictions
-        this.enrollmentInterval = setInterval(() => {
-            this.updateEnrollmentPredictions();
-        }, 120000); // Update every 2 minutes
-    }
-
-    selectStakeholderRole(role) {
-        console.log('Selecting stakeholder role:', role); // Debug log
-        this.currentRole = role;
-        this.hideWelcomeScreen();
-        this.showMainApp();
-        this.loadRoleDashboard(role);
-        this.showNotification(`Welcome to your ${this.getRoleDisplayName(role)} dashboard!`, 'success');
-    }
-
-    getRoleDisplayName(role) {
-        const roleMap = {
-            'pharmaceutical': 'Pharmaceutical',
-            'physicians': 'Physician',
-            'cros': 'CRO'
-        };
-        return roleMap[role] || role;
-    }
-
-    loadRoleDashboard(role) {
-        console.log('Loading dashboard for role:', role); // Debug log
-        
-        // Update role badge
-        const roleText = document.getElementById('current-role-text');
-        if (roleText) {
-            roleText.textContent = this.getRoleDisplayName(role);
-        }
-
-        // Hide all dashboards first
-        document.querySelectorAll('.role-dashboard').forEach(dashboard => {
-            dashboard.classList.remove('active');
-            dashboard.classList.add('hidden');
+        // Modal outside click
+        document.getElementById('stakeholder-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'stakeholder-modal') {
+                document.getElementById('stakeholder-modal').classList.add('hidden');
+            }
         });
+    }
 
+    initializeData() {
+        this.sampleTrials = [
+            {
+                nctId: "NCT05123456",
+                title: "Phase III Trial of CardioStent Pro in Complex Coronary Lesions",
+                condition: "coronary-artery-disease",
+                phase: "Phase 3",
+                status: "Recruiting",
+                location: "New York, NY",
+                sponsor: "CardioTech Solutions",
+                estimatedEnrollment: 2400,
+                contact: "Dr. Sarah Johnson - (555) 123-4567",
+                eligibility: {
+                    ageMin: 18,
+                    ageMax: 80,
+                    gender: "All",
+                    conditions: ["coronary-artery-disease", "chest-pain", "myocardial-infarction"]
+                }
+            },
+            {
+                nctId: "NCT05234567",
+                title: "Advanced Diabetes Management with Continuous Glucose Monitoring",
+                condition: "diabetes",
+                phase: "Phase 2",
+                status: "Active",
+                location: "Multiple US Sites",
+                sponsor: "Diabetes Research Corp",
+                estimatedEnrollment: 180,
+                contact: "Dr. Michael Chen - (555) 234-5678",
+                eligibility: {
+                    ageMin: 25,
+                    ageMax: 75,
+                    gender: "All",
+                    conditions: ["diabetes", "type-2-diabetes", "insulin-resistance"]
+                }
+            },
+            {
+                nctId: "NCT05345678",
+                title: "Novel Alzheimer's Drug XR-2024 Phase II Study",
+                condition: "alzheimers",
+                phase: "Phase 2",
+                status: "Recruiting",
+                location: "Boston, MA",
+                sponsor: "NeuroTech Research",
+                estimatedEnrollment: 300,
+                contact: "Dr. Lisa Wang - (555) 345-6789",
+                eligibility: {
+                    ageMin: 55,
+                    ageMax: 85,
+                    gender: "All",
+                    conditions: ["alzheimers", "dementia", "cognitive-decline"]
+                }
+            },
+            {
+                nctId: "NCT05456789",
+                title: "Innovative Cancer Immunotherapy Combination Study",
+                condition: "cancer",
+                phase: "Phase 1/2",
+                status: "Recruiting",
+                location: "Los Angeles, CA",
+                sponsor: "Oncology Innovations Inc",
+                estimatedEnrollment: 120,
+                contact: "Dr. Robert Martinez - (555) 456-7890",
+                eligibility: {
+                    ageMin: 18,
+                    ageMax: 75,
+                    gender: "All",
+                    conditions: ["cancer", "solid-tumors", "metastatic-cancer"]
+                }
+            }
+        ];
+    }
+
+    selectStakeholder(stakeholder) {
+        this.currentStakeholder = stakeholder;
+        
+        // Update navigation
+        const stakeholderNames = {
+            physician: 'Physician',
+            pharma: 'Pharmaceutical',
+            cro: 'CRO'
+        };
+        
+        document.getElementById('current-stakeholder').textContent = stakeholderNames[stakeholder];
+        
+        // Hide all sections
+        document.querySelectorAll('.dashboard-section').forEach(section => {
+            section.classList.add('hidden');
+        });
+        
+        document.getElementById('welcome-section').classList.add('hidden');
+        
         // Show selected dashboard
-        const dashboardId = `${role}-dashboard`;
-        const dashboard = document.getElementById(dashboardId);
-        console.log('Looking for dashboard:', dashboardId, dashboard); // Debug log
+        document.getElementById(`${stakeholder}-dashboard`).classList.remove('hidden');
         
-        if (dashboard) {
-            dashboard.classList.add('active');
-            dashboard.classList.remove('hidden');
-            console.log('Dashboard shown successfully'); // Debug log
-        } else {
-            console.error('Dashboard not found:', dashboardId);
-        }
+        // Close modal
+        document.getElementById('stakeholder-modal').classList.add('hidden');
 
-        // Load dashboard-specific data
-        this.loadDashboardMetrics(role);
+        // Initialize stakeholder-specific features
+        if (stakeholder === 'cro') {
+            setTimeout(() => this.initializeEnrollmentChart(), 100);
+        }
+    }
+
+    handlePatientMatching() {
+        const condition = document.getElementById('patient-condition').value;
+        const age = parseInt(document.getElementById('patient-age').value);
+        const location = document.getElementById('patient-location').value;
         
-        // Small delay to ensure DOM is ready for charts
-        setTimeout(() => {
-            this.loadDashboardCharts(role);
-            this.loadRoleSpecificContent(role);
-        }, 100);
-    }
-
-    loadDashboardMetrics(role) {
-        const stakeholder = this.stakeholderTypes.find(s => s.id === role);
-        if (!stakeholder) return;
-
-        const metricsContainer = document.getElementById('dashboard-metrics');
-        if (!metricsContainer) return;
-
-        metricsContainer.innerHTML = '';
-
-        stakeholder.dashboard_cards.forEach(card => {
-            const metricCard = document.createElement('div');
-            metricCard.className = 'metric-card';
-            metricCard.innerHTML = `
-                <div class="metric-value" style="color: var(--color-${card.color === 'blue' ? 'primary' : card.color === 'green' ? 'success' : card.color === 'purple' ? 'teal-500' : 'warning'})">${card.value}</div>
-                <div class="metric-label">${card.title}</div>
-                <div class="metric-trend ${card.trend.startsWith('+') ? 'positive' : 'negative'}">${card.trend}</div>
-            `;
-            metricsContainer.appendChild(metricCard);
-        });
-    }
-
-    loadDashboardCharts(role) {
-        // Destroy any existing charts to prevent conflicts
-        Object.values(this.charts).forEach(chart => {
-            if (chart && typeof chart.destroy === 'function') {
-                chart.destroy();
-            }
-        });
-        this.charts = {};
-
-        switch (role) {
-            case 'pharmaceutical':
-                this.loadPharmaceuticalCharts();
-                break;
-            case 'physicians':
-                this.loadPhysiciansCharts();
-                break;
-            case 'cros':
-                this.loadCROCharts();
-                break;
-        }
-    }
-
-    loadPharmaceuticalCharts() {
-        // Competitive Landscape Chart
-        const competitiveCtx = document.getElementById('competitive-chart')?.getContext('2d');
-        if (competitiveCtx) {
-            this.charts.competitive = new Chart(competitiveCtx, {
-                type: 'bar',
-                data: {
-                    labels: this.competitiveIntelligence.map(c => c.company),
-                    datasets: [{
-                        label: 'Pipeline Count',
-                        data: this.competitiveIntelligence.map(c => c.pipeline_count),
-                        backgroundColor: ['#1FB8CD', '#FFC185', '#B4413C', '#ECEBD5']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-        }
-
-        // Initialize site selection map
-        setTimeout(() => {
-            this.initializeSiteMap();
-        }, 200);
-    }
-
-    loadPhysiciansCharts() {
-        // Practice Analytics Chart
-        const practiceCtx = document.getElementById('practice-chart')?.getContext('2d');
-        if (practiceCtx) {
-            this.charts.practice = new Chart(practiceCtx, {
-                type: 'line',
-                data: {
-                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-                    datasets: [{
-                        label: 'Patient Referrals',
-                        data: [12, 19, 8, 15, 22, 34],
-                        borderColor: '#1FB8CD',
-                        backgroundColor: 'rgba(31, 184, 205, 0.1)',
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-        }
-    }
-
-    loadCROCharts() {
-        // Site Performance Chart
-        const siteCtx = document.getElementById('site-performance-chart')?.getContext('2d');
-        if (siteCtx) {
-            this.charts.sitePerformance = new Chart(siteCtx, {
-                type: 'scatter',
-                data: {
-                    datasets: [{
-                        label: 'Site Performance',
-                        data: this.sitePerformanceData.map(site => ({
-                            x: site.enrollment_velocity,
-                            y: site.performance_score
-                        })),
-                        backgroundColor: '#1FB8CD',
-                        borderColor: '#1FB8CD',
-                        pointRadius: 8
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Enrollment Velocity'
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Performance Score'
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // Enrollment Prediction Chart
-        const enrollmentCtx = document.getElementById('enrollment-prediction-chart')?.getContext('2d');
-        if (enrollmentCtx) {
-            this.charts.enrollmentPrediction = new Chart(enrollmentCtx, {
-                type: 'line',
-                data: {
-                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-                    datasets: [{
-                        label: 'Actual',
-                        data: [45, 89, 134, 178, 223, 267, 312, 342, null, null, null, null],
-                        borderColor: '#1FB8CD',
-                        backgroundColor: 'rgba(31, 184, 205, 0.1)',
-                        fill: false,
-                        tension: 0.4
-                    }, {
-                        label: 'Predicted',
-                        data: [null, null, null, null, null, null, null, 342, 378, 412, 445, 487],
-                        borderColor: '#FFC185',
-                        backgroundColor: 'rgba(255, 193, 133, 0.1)',
-                        borderDash: [5, 5],
-                        fill: false,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-        }
-
-        // Budget Chart
-        const budgetCtx = document.getElementById('budget-chart')?.getContext('2d');
-        if (budgetCtx) {
-            this.charts.budget = new Chart(budgetCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Used', 'Remaining'],
-                    datasets: [{
-                        data: [87, 13],
-                        backgroundColor: ['#1FB8CD', '#ECEBD5'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
-                    }
-                }
-            });
-        }
-    }
-
-    initializeSiteMap() {
-        const mapContainer = document.getElementById('site-map');
-        if (!mapContainer || typeof L === 'undefined') {
-            if (mapContainer) {
-                mapContainer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; background: var(--color-bg-1); border-radius: var(--radius-base); color: var(--color-text-secondary);">Interactive site map will load here with real-time site performance data</div>';
-            }
-            return;
-        }
-
-        try {
-            // Clear any existing map
-            if (this.charts.siteMap) {
-                this.charts.siteMap.remove();
-            }
-
-            // Initialize Leaflet map
-            const map = L.map('site-map').setView([39.8283, -98.5795], 4); // Center on USA
-
-            // Add tile layer
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            }).addTo(map);
-
-            // Add site markers
-            this.sitePerformanceData.forEach(site => {
-                const marker = L.marker([site.location.lat, site.location.lng]).addTo(map);
-                marker.bindPopup(`
-                    <strong>${site.name}</strong><br>
-                    Performance Score: ${site.performance_score}<br>
-                    Enrollment Velocity: ${site.enrollment_velocity}<br>
-                    Active Trials: ${site.active_trials}
-                `);
-            });
-
-            this.charts.siteMap = map;
-        } catch (error) {
-            console.error('Map initialization failed:', error);
-            mapContainer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; background: var(--color-bg-1); border-radius: var(--radius-base); color: var(--color-text-secondary);">Map loading failed. Interactive site map will be available with full deployment.</div>';
-        }
-    }
-
-    loadRoleSpecificContent(role) {
-        switch (role) {
-            case 'pharmaceutical':
-                this.loadRegulatoryUpdates();
-                break;
-            case 'physicians':
-                // Content already loaded in HTML
-                break;
-            case 'cros':
-                // Content already loaded in HTML
-                break;
-        }
-    }
-
-    loadRegulatoryUpdates() {
-        const container = document.getElementById('regulatory-updates');
-        if (!container) return;
-
-        container.innerHTML = '';
-        this.regulatoryUpdates.forEach(update => {
-            const updateElement = document.createElement('div');
-            updateElement.className = 'regulatory-update';
-            updateElement.innerHTML = `
-                <div class="update-title">${update.title}</div>
-                <div class="update-summary">${update.summary}</div>
-                <div class="impact-score">Impact Score: ${update.impact_score}/10</div>
-            `;
-            container.appendChild(updateElement);
-        });
-    }
-
-    // ML-Powered Features
-    predictTrialEligibility(patientData) {
-        // Simulate ML prediction with realistic scoring
-        const baseScore = Math.random() * 0.4 + 0.4; // 0.4 to 0.8 base
-        
-        // Adjust based on patient criteria
-        let adjustments = 0;
-        if (patientData.age >= 18 && patientData.age <= 75) adjustments += 0.1;
-        if (patientData.condition) adjustments += 0.1;
-        
-        return Math.min(0.95, baseScore + adjustments);
-    }
-
-    predictEnrollmentVelocity(siteData) {
-        // Simulate enrollment velocity prediction
-        const basePrediction = Math.random() * 30 + 60; // 60-90 patients/month
-        return {
-            predicted_velocity: basePrediction,
-            confidence: Math.random() * 0.2 + 0.75, // 75-95% confidence
-            factors: ['Historical performance', 'Geographic location', 'Therapeutic area']
-        };
-    }
-
-    predictRegulatoryImpact(regulatoryData) {
-        // Simulate regulatory impact scoring
-        return {
-            impact_score: Math.random() * 3 + 7, // 7-10 impact score
-            affected_stakeholders: ['Pharmaceutical Companies', 'CROs'],
-            timeline_impact: 'Medium-term (6-12 months)'
-        };
-    }
-
-    findMatchingTrials() {
-        const conditionInput = document.getElementById('patient-condition');
-        const ageInput = document.getElementById('patient-age');
-        const locationInput = document.getElementById('patient-location');
-
-        if (!conditionInput || !ageInput || !locationInput) {
-            this.showNotification('Patient matching form not found', 'error');
-            return;
-        }
-
-        const condition = conditionInput.value.trim();
-        const age = parseInt(ageInput.value);
-        const location = locationInput.value.trim();
-
         if (!condition || !age || !location) {
-            this.showNotification('Please fill in all patient information', 'warning');
+            alert('Please fill in all fields');
             return;
         }
-
-        // Use ML model to find matches
-        const patientData = { condition, age, location };
-        const matches = this.sampleTrials.filter(trial => {
-            const eligibilityScore = this.mlModels.patientTrialMatching.predict(patientData);
-            return eligibilityScore > 0.6 && 
-                   (trial.condition.toLowerCase().includes(condition.toLowerCase()) ||
-                    condition.toLowerCase().includes(trial.condition.toLowerCase()));
-        });
-
-        this.displayTrialMatches(matches, patientData);
-    }
-
-    displayTrialMatches(matches, patientData) {
-        const container = document.getElementById('trial-matches');
-        if (!container) return;
-
-        container.innerHTML = '';
-
-        if (matches.length === 0) {
-            container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--color-text-secondary);">No matching trials found. Please try adjusting the search criteria.</div>';
-            return;
-        }
-
-        matches.forEach(trial => {
-            const eligibilityScore = this.mlModels.patientTrialMatching.predict(patientData);
-            const matchElement = document.createElement('div');
-            matchElement.className = 'trial-match';
-            matchElement.innerHTML = `
-                <h4>${trial.title}</h4>
-                <p><strong>Condition:</strong> ${trial.condition}</p>
-                <p><strong>Phase:</strong> ${trial.phase}</p>
-                <p><strong>Status:</strong> ${trial.status}</p>
-                <p><strong>Locations:</strong> ${trial.locations.join(', ')}</p>
-                <p><strong>Distance:</strong> ${trial.distance_miles} miles</p>
-                <p><strong>Enrollment:</strong> ${trial.enrollment.current}/${trial.enrollment.target}</p>
-                <p><strong>Eligibility:</strong> ${trial.eligibility_criteria.join(', ')}</p>
-                <div class="match-score">Eligibility Score: ${(eligibilityScore * 100).toFixed(1)}%</div>
-                <button class="btn btn--primary btn--sm" onclick="window.clinicalIntelApp.generateReferral('${trial.id}')">Generate Referral</button>
-            `;
-            container.appendChild(matchElement);
-        });
-
-        this.showNotification(`Found ${matches.length} matching trials`, 'success');
-    }
-
-    generateReferral(trialId) {
-        const trial = this.sampleTrials.find(t => t.id === trialId);
-        if (trial) {
-            this.showNotification(`Referral generated for ${trial.title}`, 'success');
-            // In a real application, this would generate and send the referral
-        }
-    }
-
-    calculateROI() {
-        const phaseSelect = document.getElementById('roi-phase');
-        const marketSizeInput = document.getElementById('roi-market-size');
-        const npvDisplay = document.getElementById('roi-npv');
-        const returnDisplay = document.getElementById('roi-return');
-
-        if (!phaseSelect || !marketSizeInput || !npvDisplay || !returnDisplay) {
-            return;
-        }
-
-        const phase = phaseSelect.value;
-        const marketSize = parseFloat(marketSizeInput.value) || 1000;
-
-        // Simulate ROI calculation with realistic parameters
-        const phaseMultipliers = {
-            'phase1': { cost: 15, success: 0.6, timeline: 2 },
-            'phase2': { cost: 45, success: 0.35, timeline: 3 },
-            'phase3': { cost: 180, success: 0.65, timeline: 4 }
-        };
-
-        const params = phaseMultipliers[phase] || phaseMultipliers.phase2;
-        const developmentCost = params.cost; // Million USD
-        const successProbability = params.success;
-        const timeToMarket = params.timeline; // Years
-
-        // Calculate NPV
-        const projectedRevenue = marketSize * 0.15; // 15% market share
-        const npv = (projectedRevenue * successProbability) - developmentCost;
-        const roi = ((npv / developmentCost) * 100);
-
-        // Update display
-        npvDisplay.textContent = `$${npv.toFixed(0)}M`;
-        returnDisplay.textContent = `${roi.toFixed(1)}%`;
-    }
-
-    toggleRealTime() {
-        this.realTimeEnabled = !this.realTimeEnabled;
-        const button = document.getElementById('real-time-toggle');
-        const indicator = button?.querySelector('.status-indicator');
         
-        if (indicator) {
-            indicator.classList.toggle('active', this.realTimeEnabled);
-        }
-
-        if (this.realTimeEnabled) {
-            this.startRealTimeUpdates();
-            this.showNotification('Real-time data updates enabled', 'success');
-        } else {
-            // Clear intervals
-            if (this.realTimeInterval) clearInterval(this.realTimeInterval);
-            if (this.regulatoryInterval) clearInterval(this.regulatoryInterval);
-            if (this.enrollmentInterval) clearInterval(this.enrollmentInterval);
-            this.showNotification('Real-time data updates disabled', 'info');
-        }
-    }
-
-    updateRealTimeData() {
-        if (!this.realTimeEnabled || !this.currentRole) return;
-
-        // Simulate real-time data updates
-        const stakeholder = this.stakeholderTypes.find(s => s.id === this.currentRole);
-        if (stakeholder) {
-            // Randomly update one metric
-            const randomCard = stakeholder.dashboard_cards[Math.floor(Math.random() * stakeholder.dashboard_cards.length)];
-            const currentValue = parseFloat(randomCard.value.replace(/[^0-9.]/g, ''));
-            const change = (Math.random() - 0.5) * 0.1; // ±5% change
-            const newValue = currentValue * (1 + change);
-            
-            // Update the value (simulate real-time change)
-            if (Math.random() > 0.8) { // 20% chance of update
-                this.loadDashboardMetrics(this.currentRole);
-                this.showNotification('Dashboard data updated', 'info');
-            }
-        }
-    }
-
-    checkForRegulatoryUpdates() {
-        // Simulate checking for new regulatory updates
-        if (Math.random() > 0.9) { // 10% chance of new update
-            const newUpdate = {
-                id: `update_${Date.now()}`,
-                title: "New FDA Guidance Released",
-                agency: "FDA",
-                date: new Date().toISOString().split('T')[0],
-                impact_score: Math.random() * 3 + 7,
-                affected_areas: ["Clinical Trials", "Digital Health"],
-                summary: "Updated guidance on digital health technologies in clinical trials"
-            };
-
-            this.regulatoryUpdates.unshift(newUpdate);
-            if (this.currentRole === 'pharmaceutical') {
-                this.loadRegulatoryUpdates();
-            }
-            this.showNotification('New regulatory guidance available', 'warning');
-        }
-    }
-
-    updateEnrollmentPredictions() {
-        // Update enrollment predictions using ML
-        if (this.currentRole === 'cros' && this.charts.enrollmentPrediction) {
-            // Simulate updated predictions
-            const chart = this.charts.enrollmentPrediction;
-            const lastActual = 342;
-            const newPredictions = [378, 412, 445, 487];
-            
-            // Update chart data
-            chart.data.datasets[1].data = [null, null, null, null, null, null, null, lastActual, ...newPredictions];
-            chart.update();
-        }
-    }
-
-    showExportModal() {
-        const modal = document.getElementById('export-modal');
-        if (modal) {
-            modal.classList.remove('hidden');
-            
-            // Set default dates
-            const startDateInput = document.getElementById('export-start-date');
-            const endDateInput = document.getElementById('export-end-date');
-            
-            if (startDateInput && endDateInput) {
-                const today = new Date();
-                const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
-                
-                startDateInput.value = lastMonth.toISOString().split('T')[0];
-                endDateInput.value = today.toISOString().split('T')[0];
-            }
-        }
-    }
-
-    hideExportModal() {
-        const modal = document.getElementById('export-modal');
-        if (modal) {
-            modal.classList.add('hidden');
-        }
-    }
-
-    exportData() {
-        const formatSelect = document.getElementById('export-format');
-        const startDateInput = document.getElementById('export-start-date');
-        const endDateInput = document.getElementById('export-end-date');
-
-        if (!formatSelect || !startDateInput || !endDateInput) {
-            this.showNotification('Export form elements not found', 'error');
-            return;
-        }
-
-        const format = formatSelect.value;
-        const startDate = startDateInput.value;
-        const endDate = endDateInput.value;
-
-        // Simulate data export
-        const exportData = {
-            role: this.currentRole,
-            format: format,
-            dateRange: { start: startDate, end: endDate },
-            timestamp: new Date().toISOString(),
-            data: {
-                metrics: this.stakeholderTypes.find(s => s.id === this.currentRole)?.dashboard_cards || [],
-                trials: this.sampleTrials,
-                regulatory_updates: this.regulatoryUpdates
-            }
-        };
-
-        // Create download link
-        const dataStr = JSON.stringify(exportData, null, 2);
-        const dataBlob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(dataBlob);
+        // Show loading state
+        const resultsDiv = document.getElementById('trial-results');
+        const resultsContainer = document.getElementById('results-container');
         
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `clinicalintel_export_${this.currentRole}_${Date.now()}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-
-        this.hideExportModal();
-        this.showNotification(`Data exported successfully as ${format.toUpperCase()}`, 'success');
-    }
-
-    changeRole() {
-        if (confirm('Are you sure you want to switch roles? Any unsaved work may be lost.')) {
-            this.currentRole = null;
-            
-            // Clear intervals if running
-            if (this.realTimeInterval) clearInterval(this.realTimeInterval);
-            if (this.regulatoryInterval) clearInterval(this.regulatoryInterval);
-            if (this.enrollmentInterval) clearInterval(this.enrollmentInterval);
-            
-            // Destroy charts to prevent memory leaks
-            Object.values(this.charts).forEach(chart => {
-                if (chart && typeof chart.destroy === 'function') {
-                    chart.destroy();
-                }
-            });
-            this.charts = {};
-            
-            // Hide main app and show welcome screen
-            document.getElementById('main-app').classList.add('hidden');
-            this.showWelcomeScreen();
-            
-            this.showNotification('Switched to role selection', 'info');
-        }
-    }
-
-    showNotification(message, type = 'info') {
-        const container = document.getElementById('notification-container');
-        if (!container) return;
-
-        const notification = document.createElement('div');
-        notification.className = `notification ${type}`;
-        notification.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span>${message}</span>
-                <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; font-size: 18px; cursor: pointer; color: var(--color-text-secondary);">&times;</button>
-            </div>
-        `;
-
-        container.appendChild(notification);
-
-        // Auto-remove after 5 seconds
+        resultsContainer.innerHTML = '<div class="loading">🔍 Searching for matching trials...</div>';
+        resultsDiv.classList.remove('hidden');
+        
+        // Simulate API call with realistic delay
         setTimeout(() => {
-            if (notification.parentElement) {
-                notification.remove();
-            }
-        }, 5000);
+            const matchingTrials = this.findMatchingTrials(condition, age, location);
+            this.displayTrialResults(matchingTrials);
+        }, 2000);
     }
 
-    // API Integration Methods (simulated for demo)
-    async fetchClinicalTrialsData() {
-        // Simulate API call to ClinicalTrials.gov
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve(this.sampleTrials);
-            }, 1000);
-        });
+    findMatchingTrials(condition, age, location) {
+        // Filter and score trials
+        return this.sampleTrials.filter(trial => {
+            const conditionMatch = trial.condition === condition || 
+                                   trial.eligibility.conditions.includes(condition);
+            const ageMatch = age >= trial.eligibility.ageMin && age <= trial.eligibility.ageMax;
+            return conditionMatch && ageMatch;
+        }).map(trial => ({
+            ...trial,
+            matchScore: this.calculateMatchScore(trial, condition, age, location)
+        })).sort((a, b) => b.matchScore - a.matchScore);
     }
 
-    async fetchFDAData() {
-        // Simulate API call to OpenFDA
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve(this.regulatoryUpdates);
-            }, 800);
-        });
-    }
-
-    async fetchSitePerformanceData() {
-        // Simulate API call to site performance database
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve(this.sitePerformanceData);
-            }, 600);
-        });
-    }
-
-    // Error handling and recovery
-    handleError(error, context) {
-        console.error(`Error in ${context}:`, error);
-        this.showNotification(`An error occurred in ${context}. Please refresh the page if issues persist.`, 'error');
-    }
-
-    // Performance monitoring
-    measurePerformance(operation, startTime) {
-        const endTime = performance.now();
-        const duration = endTime - startTime;
-        console.log(`${operation} took ${duration.toFixed(2)} milliseconds`);
+    calculateMatchScore(trial, condition, age, location) {
+        let score = 0;
         
-        if (duration > 1000) {
-            console.warn(`Slow operation detected: ${operation}`);
+        // Condition match (50 points)
+        if (trial.condition === condition || trial.eligibility.conditions.includes(condition)) {
+            score += 50;
         }
+        
+        // Age eligibility (30 points)
+        if (age >= trial.eligibility.ageMin && age <= trial.eligibility.ageMax) {
+            score += 30;
+        }
+        
+        // Location proximity (20 points)
+        if (trial.location.includes('NY') && location.startsWith('1')) {
+            score += 20;
+        } else if (trial.location.includes('Multiple') || trial.location.includes('US Sites')) {
+            score += 15;
+        } else {
+            score += 10; // Some points for any location
+        }
+        
+        return Math.min(score, 100);
     }
-}
 
-// Initialize the application when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    try {
-        window.clinicalIntelApp = new ClinicalIntelPlatform();
-    } catch (error) {
-        console.error('Failed to initialize application:', error);
-        document.body.innerHTML = `
-            <div style="display: flex; align-items: center; justify-content: center; height: 100vh; background: var(--color-background); color: var(--color-text); font-family: var(--font-family-base);">
-                <div style="text-align: center; max-width: 500px; padding: 40px;">
-                    <h1 style="color: var(--color-error); margin-bottom: 20px;">Application Error</h1>
-                    <p style="margin-bottom: 30px;">Failed to initialize ClinicalIntel Pro. This may be due to a browser compatibility issue or missing dependencies.</p>
-                    <button onclick="location.reload()" style="padding: 12px 24px; background: var(--color-primary); color: var(--color-btn-primary-text); border: none; border-radius: var(--radius-base); cursor: pointer; font-size: var(--font-size-base);">Refresh Page</button>
+    displayTrialResults(trials) {
+        const resultsContainer = document.getElementById('results-container');
+        
+        if (trials.length === 0) {
+            resultsContainer.innerHTML = '<div class="no-results">No matching trials found. Please try different criteria.</div>';
+            return;
+        }
+        
+        resultsContainer.innerHTML = trials.map(trial => `
+            <div class="trial-card">
+                <div class="trial-header">
+                    <h4>${trial.title}</h4>
+                    <div class="match-score">Match: ${trial.matchScore}%</div>
+                </div>
+                <div class="trial-details">
+                    <p><strong>NCT ID:</strong> ${trial.nctId}</p>
+                    <p><strong>Phase:</strong> ${trial.phase}</p>
+                    <p><strong>Status:</strong> ${trial.status}</p>
+                    <p><strong>Location:</strong> ${trial.location}</p>
+                    <p><strong>Sponsor:</strong> ${trial.sponsor}</p>
+                    <p><strong>Enrollment:</strong> ${trial.estimatedEnrollment.toLocaleString()} patients</p>
+                    <p><strong>Contact:</strong> ${trial.contact}</p>
+                </div>
+                <div class="trial-actions">
+                    <button class="btn btn--primary" onclick="app.generateReferral('${trial.nctId}')">
+                        Generate Referral
+                    </button>
+                    <button class="btn btn--outline" onclick="app.getPatientEducation('${trial.nctId}')">
+                        Patient Info
+                    </button>
+                    <button class="btn btn--secondary" onclick="app.contactCoordinator('${trial.nctId}')">
+                        Contact Team
+                    </button>
                 </div>
             </div>
-        `;
+        `).join('');
     }
-});
 
-// Export for potential module use
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = ClinicalIntelPlatform;
+    generateReferral(nctId) {
+        const trial = this.sampleTrials.find(t => t.nctId === nctId);
+        alert(`📧 Referral Generated!\n\nTrial: ${trial.title}\nNCT ID: ${nctId}\n\n✅ Referral email prepared and sent to study coordinator\n✅ Patient eligibility pre-screening initiated\n✅ Coordinator will contact patient within 24 hours\n\nReferral ID: REF-${Date.now().toString().slice(-6)}`);
+    }
+
+    getPatientEducation(nctId) {
+        const trial = this.sampleTrials.find(t => t.nctId === nctId);
+        alert(`📚 Patient Education Materials Generated\n\nTrial: ${trial.title}\nNCT ID: ${nctId}\n\n✅ Plain-language study overview\n✅ Risks and benefits summary\n✅ Time commitment details\n✅ Contact information sheet\n✅ Frequently asked questions\n\nMaterials sent to patient portal and email.`);
+    }
+
+    contactCoordinator(nctId) {
+        const trial = this.sampleTrials.find(t => t.nctId === nctId);
+        alert(`📞 Connecting with Study Team\n\nTrial: ${trial.title}\nContact: ${trial.contact}\n\n✅ Direct line to study coordinator\n✅ Email contact form sent\n✅ Patient information shared (with consent)\n✅ Follow-up scheduled within 2 business days`);
+    }
+
+    initializeEnrollmentChart() {
+        const ctx = document.getElementById('enrollmentChart');
+        if (ctx && !this.charts.enrollment) {
+            this.charts.enrollment = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+                    datasets: [{
+                        label: 'Monthly Enrollment',
+                        data: [12, 19, 15, 25, 22, 30, 28],
+                        borderColor: '#008c8a',
+                        backgroundColor: 'rgba(0, 140, 138, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+    }
 }
+
+// ROI Calculator function (global)
+function calculateROI() {
+    const investment = parseFloat(document.getElementById('roi-investment').value) || 0;
+    const timeSaved = parseFloat(document.getElementById('roi-time-saved').value) || 0;
+    
+    if (investment === 0 || timeSaved === 0) {
+        alert('Please enter valid investment and time saved values');
+        return;
+    }
+    
+    // ROI calculation logic
+    const timeSavingsValue = timeSaved * 100000; // $100k per month saved
+    const riskReduction = 0.15; // 15% risk reduction
+    const riskValue = riskReduction * investment * 1000000; // Convert to actual dollars
+    const totalBenefit = timeSavingsValue + riskValue;
+    
+    const roi = ((totalBenefit - (investment * 1000000)) / (investment * 1000000) * 100).toFixed(1);
+    const paybackMonths = Math.ceil((investment * 1000000) / (totalBenefit / 12));
+    
+    // Display results
+    document.getElementById('roi-percentage').textContent = roi + '%';
+    document.getElementById('roi-payback').textContent = paybackMonths + ' months';
+    document.getElementById('roi-results').classList.remove('hidden');
+}
+
+// Initialize app
+const app = new ClinicalResearchApp();
