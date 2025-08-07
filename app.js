@@ -1,4 +1,4 @@
-// Clinical Research Intelligence Platform - Professional Edition
+// Clinical Research Intelligence Platform - All Issues Fixed
 class ClinicalResearchApp {
     constructor() {
         this.currentStakeholder = null;
@@ -7,18 +7,15 @@ class ClinicalResearchApp {
         this.croData = null;
         this.drugDevelopmentData = null;
         
-        // Perplexity AI Configuration
         this.perplexityConfig = {
             apiKey: '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',
             apiUrl: 'https://api.perplexity.ai/chat/completions',
             model: 'sonar'
         };
         
-        // API Endpoints
         this.clinicalTrialsAPI = 'https://clinicaltrials.gov/api/v2/studies';
         this.fdaAPI = 'https://api.fda.gov';
         
-        // Data processing agents
         this.dataProcessingAgent = new DataProcessingAgent();
         this.locationAgent = new LocationAgent();
         this.realTimeDataAgent = new RealTimeDataAgent(this.perplexityConfig);
@@ -27,6 +24,7 @@ class ClinicalResearchApp {
         this.charts = {};
         this.analysisResults = {};
         this.generatedContent = {};
+        this.selectedTrialContent = {}; // NEW: Store trial-specific content
         this.init();
     }
 
@@ -48,7 +46,6 @@ class ClinicalResearchApp {
     }
 
     bindEventListeners() {
-        // Stakeholder selection
         document.getElementById('stakeholder-selector').addEventListener('click', () => {
             document.getElementById('stakeholder-modal').classList.remove('hidden');
         });
@@ -61,7 +58,6 @@ class ClinicalResearchApp {
             document.getElementById('stakeholder-modal').classList.remove('hidden');
         });
 
-        // Stakeholder cards
         document.querySelectorAll('.stakeholder-card').forEach(card => {
             card.addEventListener('click', (e) => {
                 const stakeholder = e.currentTarget.dataset.stakeholder;
@@ -69,7 +65,6 @@ class ClinicalResearchApp {
             });
         });
 
-        // File upload handlers
         const patientFilesInput = document.getElementById('patient-files');
         if (patientFilesInput) {
             patientFilesInput.addEventListener('change', (e) => {
@@ -77,7 +72,6 @@ class ClinicalResearchApp {
             });
         }
 
-        // Manual patient form
         const manualForm = document.getElementById('manual-patient-form');
         if (manualForm) {
             manualForm.addEventListener('submit', (e) => {
@@ -86,7 +80,6 @@ class ClinicalResearchApp {
             });
         }
 
-        // Modal outside click handlers
         document.querySelectorAll('.modal').forEach(modal => {
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
@@ -107,17 +100,12 @@ class ClinicalResearchApp {
         
         document.getElementById('current-stakeholder').textContent = stakeholderNames[stakeholder];
         
-        // Hide all sections
         document.querySelectorAll('.dashboard-section').forEach(section => {
             section.classList.add('hidden');
         });
         
         document.getElementById('welcome-section').classList.add('hidden');
-        
-        // Show selected dashboard
         document.getElementById(`${stakeholder}-dashboard`).classList.remove('hidden');
-        
-        // Close modal
         document.getElementById('stakeholder-modal').classList.add('hidden');
     }
 
@@ -135,10 +123,8 @@ class ClinicalResearchApp {
             try {
                 processingStatus.updateMessage(`Processing ${file.name}...`);
                 const rawData = await this.parsePatientFile(file);
-                
                 const processedData = await this.dataProcessingAgent.processPatientData(rawData);
                 uploadedData.push(...processedData);
-                
             } catch (error) {
                 console.error(`Error processing ${file.name}:`, error);
                 alert(`Failed to process ${file.name}. Error: ${error.message}`);
@@ -318,10 +304,6 @@ class ClinicalResearchApp {
         `).join('');
     }
 
-    async loadAllPatients() {
-        await this.displayPatientsWithEnrichment(this.patientData);
-    }
-
     // ========================================
     // AI ANALYSIS FUNCTIONALITY
     // ========================================
@@ -408,23 +390,20 @@ class ClinicalResearchApp {
             
             const matchingResults = await this.analysisAgent.performTrialMatching(patient, realTimeData, clinicalAnalysis);
             
-            // Step 4: Generate content (FIXED - Generate all content upfront)
+            // Step 4: ONLY generate basic content (not trial-specific)
             this.updateAnalysisProgress(100, 'Content Generation');
-            resultsContainer.innerHTML = '<div class="loading-ai">Generating professional communications...</div>';
+            resultsContainer.innerHTML = '<div class="loading-ai">Generating basic analysis materials...</div>';
             
-            const generatedContent = await this.generateAllCommunicationContent(patient, clinicalAnalysis, matchingResults);
-            
-            // Store all results
+            // Store all results WITHOUT trial-specific content
             this.storeCompleteAnalysisResults(patient.id, {
                 realTimeData,
                 clinicalAnalysis,
                 matchingResults,
-                generatedContent,
                 patient
             });
             
-            // Display results
-            resultsContainer.innerHTML = this.renderCompleteAnalysisResults(patient.id, clinicalAnalysis, matchingResults);
+            // Display results WITHOUT document section initially
+            resultsContainer.innerHTML = this.renderTrialMatchingResults(patient.id, clinicalAnalysis, matchingResults);
 
         } catch (error) {
             console.error('Real-time AI analysis failed:', error);
@@ -435,7 +414,6 @@ class ClinicalResearchApp {
                     <div class="error-details">
                         <p><strong>Error Type:</strong> ${error.constructor.name}</p>
                         <p><strong>Timestamp:</strong> ${new Date().toLocaleString()}</p>
-                        <p><strong>Details:</strong> ${error.stack || 'No additional details available'}</p>
                     </div>
                     <button class="btn btn--primary" onclick="app.retryAnalysis('${patient.id}')">Retry Analysis</button>
                 </div>
@@ -461,43 +439,15 @@ class ClinicalResearchApp {
         });
     }
 
-    async generateAllCommunicationContent(patient, clinicalAnalysis, matchingResults) {
-        const contentGenerator = new ContentGenerationAgent(this.perplexityConfig);
-        
-        // Generate all content for each trial
-        const allTrialContent = {};
-        
-        for (const trial of matchingResults.trials.slice(0, 5)) {
-            allTrialContent[trial.nctId] = {
-                specificReferral: await contentGenerator.generateSpecificReferralLetter(patient, trial, clinicalAnalysis)
-            };
-        }
-        
-        // Generate general content
-        const providerCommunication = await contentGenerator.generateProviderReferralLetter(patient, matchingResults);
-        const patientEducation = await contentGenerator.generatePatientEducationMaterials(patient, matchingResults);
-        const analysisReport = await contentGenerator.generateComprehensiveReport(patient, clinicalAnalysis, matchingResults);
-        
-        return {
-            providerCommunication,
-            patientEducation,
-            analysisReport,
-            trialSpecificContent: allTrialContent
-        };
-    }
-
     storeCompleteAnalysisResults(patientId, results) {
         this.analysisResults[patientId] = {
             ...results,
             timestamp: new Date()
         };
-        
-        this.generatedContent[patientId] = results.generatedContent;
     }
 
-    renderCompleteAnalysisResults(patientId, clinicalAnalysis, matchingResults) {
-        const patient = this.analysisResults[patientId].patient;
-        
+    // FIXED: Only show trials initially, documents appear after trial selection
+    renderTrialMatchingResults(patientId, clinicalAnalysis, matchingResults) {
         return `
             <div class="ai-analysis-complete">
                 <div class="analysis-header">
@@ -512,13 +462,16 @@ class ClinicalResearchApp {
                 
                 <div class="analysis-section">
                     <h5>Matching Clinical Trials (${matchingResults.trials.length} found)</h5>
+                    <p>Select a trial below to generate personalized referral letters and educational materials.</p>
                     <div class="trials-ranked">
                         ${this.renderMatchedTrials(matchingResults.trials, patientId)}
                     </div>
                 </div>
                 
-                <div class="analysis-section">
+                <!-- FIXED: Documents section hidden initially -->
+                <div class="analysis-section" id="documents-section-${patientId}" style="display: none;">
                     <h5>AI-Generated Communication Materials</h5>
+                    <div class="selected-trial-info" id="selected-trial-info-${patientId}"></div>
                     <div class="communication-materials">
                         <div class="materials-grid">
                             <div class="material-card">
@@ -544,18 +497,18 @@ class ClinicalResearchApp {
                             </div>
                         </div>
                     </div>
-                </div>
-                
-                <div class="analysis-actions">
-                    <button class="btn btn--primary" onclick="app.downloadComprehensiveReport('${patientId}')">
-                        Download Complete Report (PDF)
-                    </button>
-                    <button class="btn btn--secondary" onclick="app.downloadProviderCommunication('${patientId}')">
-                        Download Provider Communication (PDF)
-                    </button>
-                    <button class="btn btn--outline" onclick="app.downloadPatientMaterials('${patientId}')">
-                        Download Patient Materials (PDF)
-                    </button>
+                    
+                    <div class="analysis-actions">
+                        <button class="btn btn--primary" onclick="app.downloadComprehensiveReport('${patientId}')">
+                            Download Complete Report
+                        </button>
+                        <button class="btn btn--secondary" onclick="app.downloadProviderCommunication('${patientId}')">
+                            Download Provider Communication
+                        </button>
+                        <button class="btn btn--outline" onclick="app.downloadPatientMaterials('${patientId}')">
+                            Download Patient Materials
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
@@ -583,8 +536,8 @@ class ClinicalResearchApp {
                     </div>
                 </div>
                 <div class="trial-actions">
-                    <button class="btn btn--sm btn--primary" onclick="app.generateSpecificReferral('${trial.nctId}', '${patientId}')">
-                        Generate Referral
+                    <button class="btn btn--sm btn--primary" onclick="app.selectTrialAndGenerateContent('${trial.nctId}', '${patientId}')">
+                        Select This Trial
                     </button>
                     <button class="btn btn--sm btn--secondary" onclick="window.open('https://clinicaltrials.gov/study/${trial.nctId}', '_blank')">
                         View on ClinicalTrials.gov
@@ -595,11 +548,11 @@ class ClinicalResearchApp {
     }
 
     // ========================================
-    // FIXED REFERRAL GENERATION
+    // FIXED: TRIAL SELECTION AND CONTENT GENERATION
     // ========================================
 
-    async generateSpecificReferral(nctId, patientId) {
-        const loadingStatus = this.showProcessingStatus('Generating professional referral letter...');
+    async selectTrialAndGenerateContent(nctId, patientId) {
+        const loadingStatus = this.showProcessingStatus('Generating personalized materials for selected trial...');
         
         try {
             const patient = this.patientData.find(p => p.id === patientId);
@@ -609,38 +562,73 @@ class ClinicalResearchApp {
                 throw new Error('Patient data or analysis results not found');
             }
 
-            const trial = analysisResults.matchingResults.trials.find(t => t.nctId === nctId);
+            const selectedTrial = analysisResults.matchingResults.trials.find(t => t.nctId === nctId);
             
-            if (!trial) {
-                throw new Error('Trial information not found');
+            if (!selectedTrial) {
+                throw new Error('Selected trial not found');
             }
 
-            // FIXED: Get pre-generated content or generate if not available
-            let referralLetter;
-            if (analysisResults.generatedContent.trialSpecificContent && 
-                analysisResults.generatedContent.trialSpecificContent[nctId]) {
-                referralLetter = analysisResults.generatedContent.trialSpecificContent[nctId].specificReferral;
-            } else {
-                const contentGenerator = new ContentGenerationAgent(this.perplexityConfig);
-                referralLetter = await contentGenerator.generateSpecificReferralLetter(patient, trial, analysisResults.clinicalAnalysis);
-            }
+            // Generate ALL content for this specific trial
+            const contentGenerator = new ContentGenerationAgent(this.perplexityConfig);
+            
+            const trialSpecificContent = {
+                referralLetter: await contentGenerator.generateSpecificReferralLetter(patient, selectedTrial, analysisResults.clinicalAnalysis),
+                providerCommunication: await contentGenerator.generateTrialSpecificProviderLetter(patient, selectedTrial, analysisResults.clinicalAnalysis),
+                patientEducation: await contentGenerator.generateTrialSpecificPatientMaterials(patient, selectedTrial),
+                analysisReport: await contentGenerator.generateTrialSpecificReport(patient, selectedTrial, analysisResults.clinicalAnalysis)
+            };
+            
+            // Store trial-specific content
+            this.selectedTrialContent[patientId] = {
+                selectedTrial,
+                content: trialSpecificContent
+            };
             
             loadingStatus.close();
-            this.showGeneratedReferralModal(referralLetter, patient, trial);
+            
+            // Show documents section and update trial info
+            this.showDocumentsSection(patientId, selectedTrial);
+            
+            // Show referral modal immediately
+            this.showGeneratedReferralModal(trialSpecificContent.referralLetter, patient, selectedTrial);
             
         } catch (error) {
             loadingStatus.close();
-            console.error('Referral generation error:', error);
-            alert(`Failed to generate referral: ${error.message}`);
+            console.error('Trial selection error:', error);
+            alert(`Failed to generate materials for selected trial: ${error.message}`);
         }
     }
 
-    showGeneratedReferralModal(referralContent, patient, trial) {
-        // FIXED: Proper string handling to prevent encoding issues
-        const safeContent = this.escapeHtml(referralContent);
+    // FIXED: Show documents section after trial selection
+    showDocumentsSection(patientId, selectedTrial) {
+        const documentsSection = document.getElementById(`documents-section-${patientId}`);
+        const trialInfoDiv = document.getElementById(`selected-trial-info-${patientId}`);
         
+        if (documentsSection) {
+            documentsSection.style.display = 'block';
+        }
+        
+        if (trialInfoDiv) {
+            trialInfoDiv.innerHTML = `
+                <div class="selected-trial-banner">
+                    <h6>Materials Generated for Selected Trial:</h6>
+                    <div class="trial-summary">
+                        <strong>${selectedTrial.title}</strong> (${selectedTrial.nctId})
+                        <span class="trial-match">${selectedTrial.matchScore}% Match</span>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    // FIXED: Proper referral modal with working encoding
+    showGeneratedReferralModal(referralContent, patient, trial) {
         const modal = document.createElement('div');
         modal.className = 'modal';
+        
+        // Clean content for display and storage
+        const cleanContent = this.cleanContentForDisplay(referralContent);
+        
         modal.innerHTML = `
             <div class="modal-content modal-large">
                 <div class="modal-header">
@@ -654,18 +642,18 @@ class ClinicalResearchApp {
                             <p><strong>Patient:</strong> ${this.escapeHtml(patient.name)} | <strong>Trial:</strong> ${this.escapeHtml(trial.nctId)}</p>
                         </div>
                         <div class="referral-content">
-                            ${this.formatAIResponse(referralContent)}
+                            <pre>${cleanContent}</pre>
                         </div>
                     </div>
                     <div class="referral-actions">
-                        <button class="btn btn--primary" onclick="app.copyReferralToClipboard('${this.safeEncode(referralContent)}')">
+                        <button class="btn btn--primary" onclick="app.copyToClipboard(\`${this.escapeForJS(cleanContent)}\`)">
                             Copy to Clipboard
                         </button>
                         <button class="btn btn--secondary" onclick="app.emailReferral('${patient.id}', '${trial.nctId}')">
                             Email Referral
                         </button>
-                        <button class="btn btn--outline" onclick="app.downloadReferralPDF('${patient.id}', '${trial.nctId}')">
-                            Download PDF
+                        <button class="btn btn--outline" onclick="app.downloadReferralFile('${patient.id}', '${trial.nctId}')">
+                            Download as File
                         </button>
                     </div>
                 </div>
@@ -675,62 +663,97 @@ class ClinicalResearchApp {
         document.body.appendChild(modal);
     }
 
-    // FIXED: Safe encoding functions
+    // FIXED: String cleaning and escaping functions
+    cleanContentForDisplay(content) {
+        if (!content) return 'No content available';
+        
+        return content
+            .replace(/<[^>]*>/g, '') // Remove HTML tags
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&')
+            .replace(/&quot;/g, '"')
+            .replace(/&#039;/g, "'")
+            .replace(/\r\n/g, '\n')
+            .replace(/\r/g, '\n')
+            .trim();
+    }
+
     escapeHtml(text) {
-        const map = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
-        };
-        return text.replace(/[&<>"']/g, (m) => map[m]);
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
-    safeEncode(text) {
-        try {
-            return btoa(unescape(encodeURIComponent(text)));
-        } catch (e) {
-            console.error('Encoding error:', e);
-            return btoa(text.replace(/[^\x00-\x7F]/g, ''));
-        }
+    escapeForJS(text) {
+        if (!text) return '';
+        return text
+            .replace(/\\/g, '\\\\')
+            .replace(/`/g, '\\`')
+            .replace(/\$/g, '\\$')
+            .replace(/\n/g, '\\n')
+            .replace(/\r/g, '\\r');
     }
 
-    safeDecode(encodedText) {
+    // FIXED: Simple clipboard copy
+    copyToClipboard(content) {
         try {
-            return decodeURIComponent(escape(atob(encodedText)));
-        } catch (e) {
-            console.error('Decoding error:', e);
-            return atob(encodedText);
-        }
-    }
-
-    copyReferralToClipboard(encodedContent) {
-        try {
-            const content = this.safeDecode(encodedContent);
-            navigator.clipboard.writeText(content).then(() => {
-                alert('Referral letter copied to clipboard successfully.');
-            }).catch(() => {
-                alert('Failed to copy to clipboard. Please try again.');
-            });
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(content).then(() => {
+                    alert('Content copied to clipboard successfully.');
+                }).catch(() => {
+                    this.fallbackCopyToClipboard(content);
+                });
+            } else {
+                this.fallbackCopyToClipboard(content);
+            }
         } catch (error) {
             console.error('Copy error:', error);
-            alert('Failed to copy content. Please try again.');
+            alert('Failed to copy content. Please select and copy manually.');
         }
+    }
+
+    fallbackCopyToClipboard(content) {
+        const textArea = document.createElement('textarea');
+        textArea.value = content;
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                alert('Content copied to clipboard successfully.');
+            } else {
+                alert('Failed to copy content. Please select and copy manually.');
+            }
+        } catch (err) {
+            alert('Failed to copy content. Please select and copy manually.');
+        }
+        
+        document.body.removeChild(textArea);
     }
 
     async emailReferral(patientId, nctId) {
         try {
             const patient = this.patientData.find(p => p.id === patientId);
-            const trial = this.analysisResults[patientId].matchingResults.trials.find(t => t.nctId === nctId);
+            const trialContent = this.selectedTrialContent[patientId];
             
+            if (!trialContent) {
+                alert('Please select a trial first to generate referral materials.');
+                return;
+            }
+            
+            const trial = trialContent.selectedTrial;
             const subject = `Clinical Trial Referral - ${patient.name} - ${nctId}`;
-            const body = `Please find attached the clinical trial referral for ${patient.name} regarding trial ${nctId} - ${trial.title}.`;
+            const body = `Please find the clinical trial referral for ${patient.name} regarding trial ${nctId} - ${trial.title}.`;
             
             const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
             window.open(mailtoLink);
             
-            alert('Email client opened with referral information. Please attach the generated referral document.');
+            alert('Email client opened with referral information.');
         } catch (error) {
             console.error('Email error:', error);
             alert('Failed to open email client. Please try again.');
@@ -738,40 +761,46 @@ class ClinicalResearchApp {
     }
 
     // ========================================
-    // FIXED PREVIEW METHODS
+    // FIXED: FUNCTIONAL PREVIEW METHODS
     // ========================================
 
-    async previewProviderMaterials(patientId) {
-        const content = this.generatedContent[patientId];
-        if (!content || !content.providerCommunication) {
-            alert('Provider materials not found. Please run analysis again.');
+    previewProviderMaterials(patientId) {
+        const trialContent = this.selectedTrialContent[patientId];
+        
+        if (!trialContent || !trialContent.content.providerCommunication) {
+            alert('Please select a trial first to generate provider materials.');
             return;
         }
 
-        this.showPreviewModal('Provider Communication Materials', content.providerCommunication, 'provider');
+        this.showPreviewModal('Provider Communication Materials', trialContent.content.providerCommunication);
     }
 
-    async previewPatientMaterials(patientId) {
-        const content = this.generatedContent[patientId];
-        if (!content || !content.patientEducation) {
-            alert('Patient materials not found. Please run analysis again.');
+    previewPatientMaterials(patientId) {
+        const trialContent = this.selectedTrialContent[patientId];
+        
+        if (!trialContent || !trialContent.content.patientEducation) {
+            alert('Please select a trial first to generate patient materials.');
             return;
         }
 
-        this.showPreviewModal('Patient Education Materials', content.patientEducation, 'patient');
+        this.showPreviewModal('Patient Education Materials', trialContent.content.patientEducation);
     }
 
-    async previewAnalysisReport(patientId) {
-        const content = this.generatedContent[patientId];
-        if (!content || !content.analysisReport) {
-            alert('Analysis report not found. Please run analysis again.');
+    previewAnalysisReport(patientId) {
+        const trialContent = this.selectedTrialContent[patientId];
+        
+        if (!trialContent || !trialContent.content.analysisReport) {
+            alert('Please select a trial first to generate analysis report.');
             return;
         }
 
-        this.showPreviewModal('Comprehensive Analysis Report', content.analysisReport, 'analysis');
+        this.showPreviewModal('Comprehensive Analysis Report', trialContent.content.analysisReport);
     }
 
-    showPreviewModal(title, content, type) {
+    // FIXED: Working preview modal
+    showPreviewModal(title, content) {
+        const cleanContent = this.cleanContentForDisplay(content);
+        
         const modal = document.createElement('div');
         modal.className = 'modal';
         modal.innerHTML = `
@@ -782,10 +811,10 @@ class ClinicalResearchApp {
                 </div>
                 <div class="modal-body">
                     <div class="preview-content">
-                        ${this.formatAIResponse(content)}
+                        <pre>${cleanContent}</pre>
                     </div>
                     <div class="preview-actions">
-                        <button class="btn btn--primary" onclick="app.copyContentToClipboard('${this.safeEncode(content)}')">
+                        <button class="btn btn--primary" onclick="app.copyToClipboard(\`${this.escapeForJS(cleanContent)}\`)">
                             Copy Content
                         </button>
                         <button class="btn btn--outline" onclick="this.closest('.modal').remove()">
@@ -799,98 +828,136 @@ class ClinicalResearchApp {
         document.body.appendChild(modal);
     }
 
-    copyContentToClipboard(encodedContent) {
-        try {
-            const content = this.safeDecode(encodedContent);
-            navigator.clipboard.writeText(content).then(() => {
-                alert('Content copied to clipboard successfully.');
-            }).catch(() => {
-                alert('Failed to copy to clipboard. Please try again.');
-            });
-        } catch (error) {
-            console.error('Copy error:', error);
-            alert('Failed to copy content. Please try again.');
+    // ========================================
+    // FIXED: WORKING FILE DOWNLOADS
+    // ========================================
+
+    downloadComprehensiveReport(patientId) {
+        const trialContent = this.selectedTrialContent[patientId];
+        const patient = this.patientData.find(p => p.id === patientId);
+        
+        if (!trialContent || !patient) {
+            alert('Please select a trial first to generate comprehensive report.');
+            return;
         }
-    }
 
-    // ========================================
-    // FIXED PDF DOWNLOADS
-    // ========================================
-
-    async downloadComprehensiveReport(patientId) {
         try {
-            const results = this.analysisResults[patientId];
-            const content = this.generatedContent[patientId];
-            
-            if (!results || !content) {
-                alert('Analysis results not found. Please run analysis again.');
-                return;
-            }
-
-            const pdfContent = this.generateComprehensiveReportPDFContent(results, content);
-            await this.createAndDownloadProperPDF(pdfContent, `comprehensive-report-${this.sanitizeFilename(results.patient.name)}.txt`);
-            
+            const content = this.generateComprehensiveReportContent(patient, trialContent);
+            const filename = `comprehensive-report-${this.sanitizeFilename(patient.name)}.txt`;
+            this.downloadTextFile(content, filename);
             alert('Comprehensive report downloaded successfully.');
-            
         } catch (error) {
-            alert(`Failed to generate comprehensive report: ${error.message}`);
-            console.error('PDF generation error:', error);
+            console.error('Download error:', error);
+            alert(`Failed to download comprehensive report: ${error.message}`);
         }
     }
 
-    async downloadProviderCommunication(patientId) {
+    downloadProviderCommunication(patientId) {
+        const trialContent = this.selectedTrialContent[patientId];
+        const patient = this.patientData.find(p => p.id === patientId);
+        
+        if (!trialContent || !patient) {
+            alert('Please select a trial first to generate provider communication.');
+            return;
+        }
+
         try {
-            const results = this.analysisResults[patientId];
-            const content = this.generatedContent[patientId];
-            
-            if (!results || !content) {
-                alert('Analysis results not found. Please run analysis again.');
-                return;
-            }
-
-            const pdfContent = this.generateProviderCommunicationPDFContent(results, content);
-            await this.createAndDownloadProperPDF(pdfContent, `provider-communication-${this.sanitizeFilename(results.patient.name)}.txt`);
-            
-            alert('Provider communication materials downloaded successfully.');
-            
+            const content = this.cleanContentForDisplay(trialContent.content.providerCommunication);
+            const filename = `provider-communication-${this.sanitizeFilename(patient.name)}.txt`;
+            this.downloadTextFile(content, filename);
+            alert('Provider communication downloaded successfully.');
         } catch (error) {
-            alert(`Failed to generate provider communication: ${error.message}`);
-            console.error('PDF generation error:', error);
+            console.error('Download error:', error);
+            alert(`Failed to download provider communication: ${error.message}`);
         }
     }
 
-    async downloadPatientMaterials(patientId) {
+    downloadPatientMaterials(patientId) {
+        const trialContent = this.selectedTrialContent[patientId];
+        const patient = this.patientData.find(p => p.id === patientId);
+        
+        if (!trialContent || !patient) {
+            alert('Please select a trial first to generate patient materials.');
+            return;
+        }
+
         try {
-            const results = this.analysisResults[patientId];
-            const content = this.generatedContent[patientId];
-            
-            if (!results || !content) {
-                alert('Analysis results not found. Please run analysis again.');
-                return;
-            }
-
-            const pdfContent = this.generatePatientMaterialsPDFContent(results, content);
-            await this.createAndDownloadProperPDF(pdfContent, `patient-materials-${this.sanitizeFilename(results.patient.name)}.txt`);
-            
-            alert('Patient education materials downloaded successfully.');
-            
+            const content = this.cleanContentForDisplay(trialContent.content.patientEducation);
+            const filename = `patient-materials-${this.sanitizeFilename(patient.name)}.txt`;
+            this.downloadTextFile(content, filename);
+            alert('Patient materials downloaded successfully.');
         } catch (error) {
-            alert(`Failed to generate patient materials: ${error.message}`);
-            console.error('PDF generation error:', error);
+            console.error('Download error:', error);
+            alert(`Failed to download patient materials: ${error.message}`);
         }
     }
 
-    // FIXED: Filename sanitization
+    downloadReferralFile(patientId, nctId) {
+        const trialContent = this.selectedTrialContent[patientId];
+        const patient = this.patientData.find(p => p.id === patientId);
+        
+        if (!trialContent || !patient) {
+            alert('Referral content not found.');
+            return;
+        }
+
+        try {
+            const content = this.cleanContentForDisplay(trialContent.content.referralLetter);
+            const filename = `referral-letter-${this.sanitizeFilename(patient.name)}-${nctId}.txt`;
+            this.downloadTextFile(content, filename);
+            alert('Referral letter downloaded successfully.');
+        } catch (error) {
+            console.error('Download error:', error);
+            alert(`Failed to download referral letter: ${error.message}`);
+        }
+    }
+
+    // FIXED: Proper file download function
+    downloadTextFile(content, filename) {
+        try {
+            // Ensure content is clean and properly formatted
+            const cleanContent = content
+                .replace(/\r\n/g, '\n')
+                .replace(/\r/g, '\n')
+                .replace(/[^\x00-\x7F\n]/g, ''); // Keep only ASCII and newlines
+            
+            // Create blob with explicit UTF-8 encoding
+            const blob = new Blob([cleanContent], { 
+                type: 'text/plain;charset=utf-8' 
+            });
+            
+            // Create download link
+            const url = URL.createObjectURL(blob);
+            const downloadLink = document.createElement('a');
+            downloadLink.href = url;
+            downloadLink.download = filename;
+            downloadLink.style.display = 'none';
+            
+            // Trigger download
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            
+            // Clean up URL
+            setTimeout(() => URL.revokeObjectURL(url), 2000);
+            
+        } catch (error) {
+            console.error('File creation failed:', error);
+            throw new Error('Failed to create downloadable file');
+        }
+    }
+
     sanitizeFilename(filename) {
         return filename
-            .replace(/[^a-z0-9]/gi, '_')
+            .replace(/[^a-zA-Z0-9\-_\.]/g, '_')
             .replace(/_+/g, '_')
             .replace(/^_|_$/g, '')
             .toLowerCase();
     }
 
-    generateComprehensiveReportPDFContent(results, content) {
-        const patient = results.patient;
+    generateComprehensiveReportContent(patient, trialContent) {
+        const trial = trialContent.selectedTrial;
+        
         return `COMPREHENSIVE CLINICAL TRIAL ANALYSIS REPORT
 
 Generated by Clinical Research Intelligence Platform
@@ -912,19 +979,10 @@ Location: ${patient.location || 'Not specified'}
 Insurance: ${patient.insurance || 'Not specified'}
 
 ================================================================================
-CLINICAL ANALYSIS
+SELECTED CLINICAL TRIAL
 ================================================================================
 
-${this.cleanTextForPDF(results.clinicalAnalysis.eligibilityAssessment)}
-
-================================================================================
-TRIAL MATCHING RESULTS
-================================================================================
-
-Total Trials Found: ${results.matchingResults.trials.length}
-
-${results.matchingResults.trials.map((trial, index) => `
-Trial ${index + 1}: ${trial.title}
+Trial Title: ${trial.title}
 NCT ID: ${trial.nctId}
 Match Score: ${trial.matchScore}%
 Phase: ${trial.phase}
@@ -934,25 +992,23 @@ Condition: ${trial.condition}
 Locations: ${trial.locations.join(', ')}
 Contact: ${trial.contact || 'See ClinicalTrials.gov for contact information'}
 
-`).join('')}
-
 ================================================================================
 AI-GENERATED ANALYSIS REPORT
 ================================================================================
 
-${this.cleanTextForPDF(content.analysisReport)}
+${this.cleanContentForDisplay(trialContent.content.analysisReport)}
 
 ================================================================================
-RECOMMENDATIONS
+PROVIDER COMMUNICATION
 ================================================================================
 
-Based on the comprehensive analysis, the following recommendations are provided:
+${this.cleanContentForDisplay(trialContent.content.providerCommunication)}
 
-1. Review trial eligibility criteria carefully with the patient
-2. Discuss potential benefits and risks of clinical trial participation
-3. Coordinate with research teams for detailed screening
-4. Provide patient education materials for informed decision making
-5. Schedule follow-up to discuss patient preferences and next steps
+================================================================================
+PATIENT EDUCATION MATERIALS
+================================================================================
+
+${this.cleanContentForDisplay(trialContent.content.patientEducation)}
 
 ================================================================================
 
@@ -963,181 +1019,6 @@ Report generated: ${new Date().toLocaleString()}
 Platform: Clinical Research Intelligence Platform
 AI Analysis: Powered by Perplexity AI
 `;
-    }
-
-    generateProviderCommunicationPDFContent(results, content) {
-        const patient = results.patient;
-        const topTrial = results.matchingResults.trials[0];
-        
-        return `CLINICAL TRIAL REFERRAL COMMUNICATION
-
-Date: ${new Date().toLocaleDateString()}
-Time: ${new Date().toLocaleTimeString()}
-
-TO: Clinical Research Team / Trial Coordinator
-FROM: Referring Healthcare Provider
-RE: Patient Referral for Clinical Trial Evaluation
-
-================================================================================
-PATIENT REFERRAL INFORMATION
-================================================================================
-
-Patient Name: ${patient.name}
-Age: ${patient.age || 'Not specified'}
-Gender: ${patient.gender || 'Not specified'}
-Primary Diagnosis: ${patient.primaryDiagnosis || 'Not specified'}
-
-Medical History Summary:
-Primary Condition: ${patient.primaryDiagnosis || 'Not specified'}
-Secondary Conditions: ${patient.conditions.join(', ') || 'None documented'}
-Current Medications: ${patient.medications.join(', ') || 'None listed'}
-Location: ${patient.location || 'Not specified'}
-Insurance Provider: ${patient.insurance || 'Not specified'}
-
-================================================================================
-RECOMMENDED CLINICAL TRIAL
-================================================================================
-
-${topTrial ? `
-Primary Recommendation: ${topTrial.title}
-NCT Identifier: ${topTrial.nctId}
-AI Match Score: ${topTrial.matchScore}%
-Study Phase: ${topTrial.phase}
-Current Status: ${topTrial.status}
-Sponsor: ${topTrial.sponsor}
-Study Focus: ${topTrial.condition}
-Geographic Locations: ${topTrial.locations.join(', ')}
-` : 'Multiple trial options available - see attached comprehensive analysis'}
-
-================================================================================
-CLINICAL RATIONALE
-================================================================================
-
-${this.cleanTextForPDF(content.providerCommunication)}
-
-================================================================================
-NEXT STEPS
-================================================================================
-
-1. Research team to contact patient for detailed screening
-2. Schedule comprehensive eligibility assessment
-3. Provide detailed trial information to patient
-4. Coordinate care between research team and primary provider
-5. Maintain communication regarding patient status
-
-Generated by Clinical Research Intelligence Platform
-AI-Powered Analysis: ${new Date().toLocaleString()}
-For questions about this referral, please contact the referring provider.
-`;
-    }
-
-    generatePatientMaterialsPDFContent(results, content) {
-        const patient = results.patient;
-        
-        return `CLINICAL TRIAL INFORMATION FOR PATIENTS
-
-Generated for: ${patient.name}
-Date: ${new Date().toLocaleDateString()}
-
-================================================================================
-INTRODUCTION
-================================================================================
-
-Dear ${patient.name},
-
-Your healthcare provider has identified clinical trial opportunities that may be 
-suitable for your medical condition. This document provides you with comprehensive
-information to help you understand clinical trials and make an informed decision
-about potential participation.
-
-================================================================================
-YOUR SPECIFIC TRIAL OPTIONS
-================================================================================
-
-Our AI analysis has identified ${results.matchingResults.trials.length} clinical trial(s) that may be appropriate for you:
-
-${results.matchingResults.trials.slice(0, 3).map((trial, index) => `
-Option ${index + 1}: ${trial.title}
-Study Identifier: ${trial.nctId}
-Research Focus: ${trial.condition}
-Study Phase: ${trial.phase}
-Current Status: ${trial.status}
-Sponsor Organization: ${trial.sponsor}
-Location(s): ${trial.locations.join(', ')}
-AI Match Score: ${trial.matchScore}% (indicates how well this trial matches your profile)
-
-`).join('')}
-
-================================================================================
-PERSONALIZED INFORMATION FOR YOU
-================================================================================
-
-${this.cleanTextForPDF(content.patientEducation)}
-
-================================================================================
-YOUR RIGHTS AS A RESEARCH PARTICIPANT
-================================================================================
-
-If you decide to participate in a clinical trial, you have important rights:
-
-1. VOLUNTARY PARTICIPATION - Your participation is completely voluntary
-2. INFORMED CONSENT - You will receive detailed information about the study
-3. PRIVACY PROTECTION - Your medical information will be kept confidential
-4. CONTINUED MEDICAL CARE - Your regular medical treatment will continue
-
-Remember: The decision to participate in a clinical trial is entirely yours.
-
-Document generated: ${new Date().toLocaleString()}
-Generated by: Clinical Research Intelligence Platform
-`;
-    }
-
-    cleanTextForPDF(text) {
-        if (!text) return 'Content not available';
-        
-        return text
-            .replace(/<[^>]*>/g, '')
-            .replace(/&nbsp;/g, ' ')
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>')
-            .replace(/&amp;/g, '&')
-            .replace(/&quot;/g, '"')
-            .replace(/&#039;/g, "'")
-            .replace(/\n{3,}/g, '\n\n')
-            .trim();
-    }
-
-    // FIXED: Proper file creation and download
-    async createAndDownloadProperPDF(content, filename) {
-        try {
-            // Create proper UTF-8 encoded text file
-            const cleanContent = content
-                .replace(/\r\n/g, '\n')
-                .replace(/\r/g, '\n')
-                .replace(/[^\x00-\x7F]/g, ''); // Remove non-ASCII characters to prevent corruption
-            
-            const blob = new Blob([cleanContent], { 
-                type: 'text/plain;charset=utf-8' 
-            });
-            
-            // Create and trigger download
-            const url = URL.createObjectURL(blob);
-            const downloadLink = document.createElement('a');
-            downloadLink.href = url;
-            downloadLink.download = filename;
-            downloadLink.style.display = 'none';
-            
-            document.body.appendChild(downloadLink);
-            downloadLink.click();
-            document.body.removeChild(downloadLink);
-            
-            // Clean up
-            setTimeout(() => URL.revokeObjectURL(url), 2000);
-            
-        } catch (error) {
-            console.error('File creation failed:', error);
-            throw new Error('Failed to create downloadable file');
-        }
     }
 
     formatAIResponse(content) {
@@ -1296,8 +1177,6 @@ Focus on information from 2023-2025 and authoritative medical sources.`;
 
     async callPerplexityAPI(prompt) {
         try {
-            console.log('Making API call with valid model name: sonar');
-            
             const requestBody = {
                 model: 'sonar',
                 messages: [
@@ -1504,111 +1383,12 @@ For each trial, provide match score (0-100) with detailed reasoning and rank all
 }
 
 // ========================================
-// CONTENT GENERATION AGENT (No changes needed)
+// ENHANCED CONTENT GENERATION AGENT
 // ========================================
 
 class ContentGenerationAgent {
     constructor(perplexityConfig) {
         this.perplexityConfig = perplexityConfig;
-    }
-
-    async generateProviderReferralLetter(patient, matchingResults) {
-        const topTrials = matchingResults.trials.slice(0, 3);
-        
-        const prompt = `Generate a comprehensive provider referral letter:
-
-PATIENT: ${patient.name} (${patient.age}y, ${patient.gender})
-PRIMARY DIAGNOSIS: ${patient.primaryDiagnosis}
-CONDITIONS: ${patient.conditions.join(', ')}
-MEDICATIONS: ${patient.medications.join(', ')}
-LOCATION: ${patient.location}
-
-TOP MATCHING TRIALS:
-${topTrials.map(trial => `
-- ${trial.title} (${trial.nctId})
-  Match Score: ${trial.matchScore}%
-  Phase: ${trial.phase}
-  Sponsor: ${trial.sponsor}
-  Contact: ${trial.contact}
-`).join('')}
-
-Create a professional medical referral letter including:
-1. Formal header and recipient information
-2. Patient clinical summary
-3. Rationale for clinical trial referral
-4. Specific trial recommendations with match scores
-5. Clinical considerations and eligibility factors
-6. Coordination requirements and next steps
-7. Contact information and follow-up procedures
-
-Use appropriate medical terminology and professional formatting.`;
-
-        return await this.callPerplexityAPI(prompt);
-    }
-
-    async generatePatientEducationMaterials(patient, matchingResults) {
-        const topTrials = matchingResults.trials.slice(0, 3);
-        
-        const prompt = `Create comprehensive patient education materials:
-
-PATIENT: ${patient.name} (${patient.age} years old)
-CONDITION: ${patient.primaryDiagnosis}
-TRIAL OPTIONS: ${topTrials.length} trials identified
-
-TOP TRIAL OPTIONS:
-${topTrials.map(trial => `
-- ${trial.title}
-  Study Focus: ${trial.condition}
-  Phase: ${trial.phase}
-  Location: ${trial.locations.join(', ')}
-  Match Score: ${trial.matchScore}%
-`).join('')}
-
-Generate patient-friendly materials including:
-1. WHAT ARE CLINICAL TRIALS? (Simple explanation)
-2. WHY THESE TRIALS MIGHT HELP YOU
-3. WHAT TO EXPECT
-4. BENEFITS AND RISKS
-5. YOUR RIGHTS AND PROTECTIONS
-6. PRACTICAL CONSIDERATIONS
-7. QUESTIONS TO ASK
-8. DECISION-MAKING GUIDANCE
-9. NEXT STEPS IF INTERESTED
-10. ADDITIONAL RESOURCES
-
-Use 8th grade reading level, positive but realistic tone.`;
-
-        return await this.callPerplexityAPI(prompt);
-    }
-
-    async generateComprehensiveReport(patient, clinicalAnalysis, matchingResults) {
-        const prompt = `Generate a comprehensive clinical trial analysis report:
-
-PATIENT PROFILE: ${patient.name} (${patient.age}y, ${patient.gender})
-PRIMARY DIAGNOSIS: ${patient.primaryDiagnosis}
-ANALYSIS DATE: ${new Date().toLocaleDateString()}
-
-CLINICAL ANALYSIS RESULTS:
-${clinicalAnalysis.eligibilityAssessment}
-
-TRIAL MATCHING RESULTS:
-Total Trials Found: ${matchingResults.totalFound}
-Top Matches: ${matchingResults.trials.slice(0, 5).map(trial => 
-    `${trial.title} (${trial.nctId}) - ${trial.matchScore}% match`
-).join(', ')}
-
-Create a detailed professional report including:
-1. EXECUTIVE SUMMARY
-2. CLINICAL ELIGIBILITY ANALYSIS
-3. TRIAL MATCHING METHODOLOGY
-4. DETAILED TRIAL RECOMMENDATIONS
-5. CLINICAL CONSIDERATIONS
-6. RECOMMENDATIONS AND NEXT STEPS
-7. APPENDICES
-
-Format as a comprehensive medical report suitable for healthcare providers and research teams.`;
-
-        return await this.callPerplexityAPI(prompt);
     }
 
     async generateSpecificReferralLetter(patient, trial, clinicalAnalysis) {
@@ -1643,6 +1423,88 @@ Create a targeted referral letter including:
 9. Request for patient evaluation and feedback
 
 Format as a formal medical referral suitable for direct transmission to the trial research team.`;
+
+        return await this.callPerplexityAPI(prompt);
+    }
+
+    // NEW: Trial-specific provider letter
+    async generateTrialSpecificProviderLetter(patient, trial, clinicalAnalysis) {
+        const prompt = `Generate provider communication materials for specific trial:
+
+PATIENT: ${patient.name} (${patient.age}y, ${patient.gender})
+PRIMARY DIAGNOSIS: ${patient.primaryDiagnosis}
+
+SELECTED TRIAL: ${trial.title} (${trial.nctId})
+Match Score: ${trial.matchScore}%
+Sponsor: ${trial.sponsor}
+Phase: ${trial.phase}
+
+Create comprehensive provider communication including:
+1. Executive summary of why this trial is recommended
+2. Trial-specific benefits for this patient
+3. Coordination requirements
+4. Timeline and next steps
+5. Contact information and logistics
+6. Follow-up protocols
+
+Format as professional medical communication.`;
+
+        return await this.callPerplexityAPI(prompt);
+    }
+
+    // NEW: Trial-specific patient materials
+    async generateTrialSpecificPatientMaterials(patient, trial) {
+        const prompt = `Create patient education materials for specific trial:
+
+PATIENT: ${patient.name} (${patient.age} years old)
+CONDITION: ${patient.primaryDiagnosis}
+
+SELECTED TRIAL: ${trial.title}
+Study Focus: ${trial.condition}
+Phase: ${trial.phase}
+Locations: ${trial.locations.join(', ')}
+Sponsor: ${trial.sponsor}
+
+Generate patient-friendly materials including:
+1. About this specific clinical trial
+2. Why this trial might help you
+3. What to expect in this study
+4. Timeline and commitment required
+5. Location and logistics information
+6. Your rights and protections
+7. Questions to ask the research team
+8. Next steps if you're interested
+9. Contact information
+
+Use simple, encouraging language at 8th grade reading level.`;
+
+        return await this.callPerplexityAPI(prompt);
+    }
+
+    // NEW: Trial-specific analysis report
+    async generateTrialSpecificReport(patient, trial, clinicalAnalysis) {
+        const prompt = `Generate comprehensive analysis report for specific trial selection:
+
+PATIENT: ${patient.name} (${patient.age}y, ${patient.gender})
+PRIMARY DIAGNOSIS: ${patient.primaryDiagnosis}
+
+SELECTED TRIAL: ${trial.title} (${trial.nctId})
+Match Score: ${trial.matchScore}%
+Phase: ${trial.phase}
+Sponsor: ${trial.sponsor}
+
+CLINICAL ANALYSIS: ${clinicalAnalysis.eligibilityAssessment}
+
+Create detailed report including:
+1. Executive summary of trial selection rationale
+2. Detailed match score breakdown
+3. Clinical considerations specific to this trial
+4. Risk-benefit analysis for this patient and trial combination
+5. Timeline and logistics assessment
+6. Alternative considerations
+7. Recommendations for next steps
+
+Format as comprehensive medical analysis report.`;
 
         return await this.callPerplexityAPI(prompt);
     }
