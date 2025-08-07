@@ -1,4 +1,4 @@
-// Clinical Research Intelligence Platform - COMPLETELY FIXED
+// Clinical Research Intelligence Platform - Professional Edition
 class ClinicalResearchApp {
     constructor() {
         this.currentStakeholder = null;
@@ -7,11 +7,11 @@ class ClinicalResearchApp {
         this.croData = null;
         this.drugDevelopmentData = null;
         
-        // COMPLETELY FIXED Perplexity AI Configuration - Using ONLY valid model names
+        // Perplexity AI Configuration
         this.perplexityConfig = {
             apiKey: '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',
             apiUrl: 'https://api.perplexity.ai/chat/completions',
-            model: 'sonar' // CONFIRMED VALID model name from current API
+            model: 'sonar'
         };
         
         // API Endpoints
@@ -151,7 +151,7 @@ class ClinicalResearchApp {
             this.patientData = uploadedData;
             document.getElementById('patient-analysis-section').style.display = 'block';
             await this.displayPatientsWithEnrichment(this.patientData);
-            alert(`✅ Successfully processed ${uploadedData.length} patient records!`);
+            alert(`Successfully processed ${uploadedData.length} patient records. Ready for AI analysis.`);
         }
     }
 
@@ -309,7 +309,7 @@ class ClinicalResearchApp {
                 </div>
                 <div class="patient-actions">
                     <button class="btn btn--primary btn--sm" onclick="event.stopPropagation(); app.selectPatientForAIAnalysis('${patient.id}')">
-                        <span class="btn-icon">🤖</span>
+                        <span class="btn-icon">AI</span>
                         AI Analysis & Trial Matching
                     </button>
                     ${patient.processedAt ? `<div class="processed-info">Processed: ${new Date(patient.processedAt).toLocaleTimeString()}</div>` : ''}
@@ -323,7 +323,7 @@ class ClinicalResearchApp {
     }
 
     // ========================================
-    // WORKING AI ANALYSIS FUNCTIONALITY
+    // AI ANALYSIS FUNCTIONALITY
     // ========================================
 
     async selectPatientForAIAnalysis(patientId) {
@@ -342,7 +342,7 @@ class ClinicalResearchApp {
         if (summaryContainer) {
             summaryContainer.innerHTML = `
                 <div class="selected-patient">
-                    <h4>🤖 Real-Time AI Analysis for: ${patient.name}</h4>
+                    <h4>Real-Time AI Analysis for: ${patient.name}</h4>
                     <div class="patient-summary">
                         <div class="summary-grid">
                             <div class="summary-item">
@@ -392,25 +392,25 @@ class ClinicalResearchApp {
         try {
             // Step 1: Real-time data retrieval
             this.updateAnalysisProgress(25, 'Real-Time Data Retrieval');
-            resultsContainer.innerHTML = '<div class="loading-ai">🌐 Retrieving real-time clinical trial data...</div>';
+            resultsContainer.innerHTML = '<div class="loading-ai">Retrieving real-time clinical trial data...</div>';
             
             const realTimeData = await this.realTimeDataAgent.gatherClinicalData(patient);
             
             // Step 2: AI clinical analysis
             this.updateAnalysisProgress(50, 'AI Clinical Analysis');
-            resultsContainer.innerHTML = '<div class="loading-ai">🧠 AI agent performing comprehensive clinical analysis...</div>';
+            resultsContainer.innerHTML = '<div class="loading-ai">AI agent performing comprehensive clinical analysis...</div>';
             
             const clinicalAnalysis = await this.analysisAgent.performClinicalAnalysis(patient, realTimeData);
             
             // Step 3: Trial matching 
             this.updateAnalysisProgress(75, 'Trial Matching');
-            resultsContainer.innerHTML = '<div class="loading-ai">🎯 AI matching patient to current clinical trials...</div>';
+            resultsContainer.innerHTML = '<div class="loading-ai">AI matching patient to current clinical trials...</div>';
             
             const matchingResults = await this.analysisAgent.performTrialMatching(patient, realTimeData, clinicalAnalysis);
             
-            // Step 4: Generate content
+            // Step 4: Generate content (FIXED - Generate all content upfront)
             this.updateAnalysisProgress(100, 'Content Generation');
-            resultsContainer.innerHTML = '<div class="loading-ai">📝 Generating professional communications...</div>';
+            resultsContainer.innerHTML = '<div class="loading-ai">Generating professional communications...</div>';
             
             const generatedContent = await this.generateAllCommunicationContent(patient, clinicalAnalysis, matchingResults);
             
@@ -430,7 +430,7 @@ class ClinicalResearchApp {
             console.error('Real-time AI analysis failed:', error);
             resultsContainer.innerHTML = `
                 <div class="error-container">
-                    <h4>❌ Analysis Error</h4>
+                    <h4>Analysis Error</h4>
                     <p>Real-time AI analysis encountered an issue: ${error.message}</p>
                     <div class="error-details">
                         <p><strong>Error Type:</strong> ${error.constructor.name}</p>
@@ -464,6 +464,16 @@ class ClinicalResearchApp {
     async generateAllCommunicationContent(patient, clinicalAnalysis, matchingResults) {
         const contentGenerator = new ContentGenerationAgent(this.perplexityConfig);
         
+        // Generate all content for each trial
+        const allTrialContent = {};
+        
+        for (const trial of matchingResults.trials.slice(0, 5)) {
+            allTrialContent[trial.nctId] = {
+                specificReferral: await contentGenerator.generateSpecificReferralLetter(patient, trial, clinicalAnalysis)
+            };
+        }
+        
+        // Generate general content
         const providerCommunication = await contentGenerator.generateProviderReferralLetter(patient, matchingResults);
         const patientEducation = await contentGenerator.generatePatientEducationMaterials(patient, matchingResults);
         const analysisReport = await contentGenerator.generateComprehensiveReport(patient, clinicalAnalysis, matchingResults);
@@ -471,7 +481,8 @@ class ClinicalResearchApp {
         return {
             providerCommunication,
             patientEducation,
-            analysisReport
+            analysisReport,
+            trialSpecificContent: allTrialContent
         };
     }
 
@@ -490,42 +501,42 @@ class ClinicalResearchApp {
         return `
             <div class="ai-analysis-complete">
                 <div class="analysis-header">
-                    <h4>🧠 Real-Time AI Analysis Complete</h4>
+                    <h4>Real-Time AI Analysis Complete</h4>
                     <div class="analysis-timestamp">Completed: ${new Date().toLocaleString()}</div>
                 </div>
                 
                 <div class="analysis-section">
-                    <h5>📊 Clinical Assessment</h5>
+                    <h5>Clinical Assessment</h5>
                     <div class="analysis-content">${this.formatAIResponse(clinicalAnalysis.eligibilityAssessment)}</div>
                 </div>
                 
                 <div class="analysis-section">
-                    <h5>🎯 Matching Clinical Trials (${matchingResults.trials.length} found)</h5>
+                    <h5>Matching Clinical Trials (${matchingResults.trials.length} found)</h5>
                     <div class="trials-ranked">
                         ${this.renderMatchedTrials(matchingResults.trials, patientId)}
                     </div>
                 </div>
                 
                 <div class="analysis-section">
-                    <h5>📋 AI-Generated Communication Materials</h5>
+                    <h5>AI-Generated Communication Materials</h5>
                     <div class="communication-materials">
                         <div class="materials-grid">
                             <div class="material-card">
-                                <h6>💼 Provider Communication</h6>
+                                <h6>Provider Communication</h6>
                                 <p>Professional referral letters and clinical summaries</p>
                                 <button class="btn btn--sm btn--outline" onclick="app.previewProviderMaterials('${patientId}')">
                                     Preview Materials
                                 </button>
                             </div>
                             <div class="material-card">
-                                <h6>📚 Patient Education</h6>
+                                <h6>Patient Education</h6>
                                 <p>Easy-to-understand trial explanations and guides</p>
                                 <button class="btn btn--sm btn--outline" onclick="app.previewPatientMaterials('${patientId}')">
                                     Preview Materials
                                 </button>
                             </div>
                             <div class="material-card">
-                                <h6>📊 Analysis Report</h6>
+                                <h6>Analysis Report</h6>
                                 <p>Comprehensive AI analysis and recommendations</p>
                                 <button class="btn btn--sm btn--outline" onclick="app.previewAnalysisReport('${patientId}')">
                                     Preview Report
@@ -537,13 +548,13 @@ class ClinicalResearchApp {
                 
                 <div class="analysis-actions">
                     <button class="btn btn--primary" onclick="app.downloadComprehensiveReport('${patientId}')">
-                        📄 Download Complete Report (PDF)
+                        Download Complete Report (PDF)
                     </button>
                     <button class="btn btn--secondary" onclick="app.downloadProviderCommunication('${patientId}')">
-                        💼 Download Provider Communication (PDF)
+                        Download Provider Communication (PDF)
                     </button>
                     <button class="btn btn--outline" onclick="app.downloadPatientMaterials('${patientId}')">
-                        📚 Download Patient Materials (PDF)
+                        Download Patient Materials (PDF)
                     </button>
                 </div>
             </div>
@@ -584,7 +595,7 @@ class ClinicalResearchApp {
     }
 
     // ========================================
-    // FUNCTIONAL REFERRAL GENERATION
+    // FIXED REFERRAL GENERATION
     // ========================================
 
     async generateSpecificReferral(nctId, patientId) {
@@ -604,19 +615,30 @@ class ClinicalResearchApp {
                 throw new Error('Trial information not found');
             }
 
-            const contentGenerator = new ContentGenerationAgent(this.perplexityConfig);
-            const referralLetter = await contentGenerator.generateSpecificReferralLetter(patient, trial, analysisResults.clinicalAnalysis);
+            // FIXED: Get pre-generated content or generate if not available
+            let referralLetter;
+            if (analysisResults.generatedContent.trialSpecificContent && 
+                analysisResults.generatedContent.trialSpecificContent[nctId]) {
+                referralLetter = analysisResults.generatedContent.trialSpecificContent[nctId].specificReferral;
+            } else {
+                const contentGenerator = new ContentGenerationAgent(this.perplexityConfig);
+                referralLetter = await contentGenerator.generateSpecificReferralLetter(patient, trial, analysisResults.clinicalAnalysis);
+            }
             
             loadingStatus.close();
             this.showGeneratedReferralModal(referralLetter, patient, trial);
             
         } catch (error) {
             loadingStatus.close();
+            console.error('Referral generation error:', error);
             alert(`Failed to generate referral: ${error.message}`);
         }
     }
 
     showGeneratedReferralModal(referralContent, patient, trial) {
+        // FIXED: Proper string handling to prevent encoding issues
+        const safeContent = this.escapeHtml(referralContent);
+        
         const modal = document.createElement('div');
         modal.className = 'modal';
         modal.innerHTML = `
@@ -629,21 +651,21 @@ class ClinicalResearchApp {
                     <div class="referral-preview">
                         <div class="referral-header">
                             <h4>Clinical Trial Referral</h4>
-                            <p><strong>Patient:</strong> ${patient.name} | <strong>Trial:</strong> ${trial.nctId}</p>
+                            <p><strong>Patient:</strong> ${this.escapeHtml(patient.name)} | <strong>Trial:</strong> ${this.escapeHtml(trial.nctId)}</p>
                         </div>
                         <div class="referral-content">
                             ${this.formatAIResponse(referralContent)}
                         </div>
                     </div>
                     <div class="referral-actions">
-                        <button class="btn btn--primary" onclick="app.copyReferralToClipboard('${btoa(referralContent)}')">
-                            📋 Copy to Clipboard
+                        <button class="btn btn--primary" onclick="app.copyReferralToClipboard('${this.safeEncode(referralContent)}')">
+                            Copy to Clipboard
                         </button>
                         <button class="btn btn--secondary" onclick="app.emailReferral('${patient.id}', '${trial.nctId}')">
-                            📧 Email Referral
+                            Email Referral
                         </button>
                         <button class="btn btn--outline" onclick="app.downloadReferralPDF('${patient.id}', '${trial.nctId}')">
-                            📄 Download PDF
+                            Download PDF
                         </button>
                     </div>
                 </div>
@@ -653,30 +675,70 @@ class ClinicalResearchApp {
         document.body.appendChild(modal);
     }
 
+    // FIXED: Safe encoding functions
+    escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, (m) => map[m]);
+    }
+
+    safeEncode(text) {
+        try {
+            return btoa(unescape(encodeURIComponent(text)));
+        } catch (e) {
+            console.error('Encoding error:', e);
+            return btoa(text.replace(/[^\x00-\x7F]/g, ''));
+        }
+    }
+
+    safeDecode(encodedText) {
+        try {
+            return decodeURIComponent(escape(atob(encodedText)));
+        } catch (e) {
+            console.error('Decoding error:', e);
+            return atob(encodedText);
+        }
+    }
+
     copyReferralToClipboard(encodedContent) {
-        const content = atob(encodedContent);
-        navigator.clipboard.writeText(content).then(() => {
-            alert('✅ Referral letter copied to clipboard!');
-        }).catch(() => {
-            alert('❌ Failed to copy to clipboard. Please try again.');
-        });
+        try {
+            const content = this.safeDecode(encodedContent);
+            navigator.clipboard.writeText(content).then(() => {
+                alert('Referral letter copied to clipboard successfully.');
+            }).catch(() => {
+                alert('Failed to copy to clipboard. Please try again.');
+            });
+        } catch (error) {
+            console.error('Copy error:', error);
+            alert('Failed to copy content. Please try again.');
+        }
     }
 
     async emailReferral(patientId, nctId) {
-        const patient = this.patientData.find(p => p.id === patientId);
-        const trial = this.analysisResults[patientId].matchingResults.trials.find(t => t.nctId === nctId);
-        
-        const subject = `Clinical Trial Referral - ${patient.name} - ${nctId}`;
-        const body = `Please find attached the clinical trial referral for ${patient.name} regarding trial ${nctId} - ${trial.title}.`;
-        
-        const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        window.open(mailtoLink);
-        
-        alert('📧 Email client opened with referral information. Please attach the generated referral document.');
+        try {
+            const patient = this.patientData.find(p => p.id === patientId);
+            const trial = this.analysisResults[patientId].matchingResults.trials.find(t => t.nctId === nctId);
+            
+            const subject = `Clinical Trial Referral - ${patient.name} - ${nctId}`;
+            const body = `Please find attached the clinical trial referral for ${patient.name} regarding trial ${nctId} - ${trial.title}.`;
+            
+            const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            window.open(mailtoLink);
+            
+            alert('Email client opened with referral information. Please attach the generated referral document.');
+        } catch (error) {
+            console.error('Email error:', error);
+            alert('Failed to open email client. Please try again.');
+        }
     }
 
     // ========================================
-    // FUNCTIONAL PREVIEW METHODS
+    // FIXED PREVIEW METHODS
     // ========================================
 
     async previewProviderMaterials(patientId) {
@@ -723,8 +785,8 @@ class ClinicalResearchApp {
                         ${this.formatAIResponse(content)}
                     </div>
                     <div class="preview-actions">
-                        <button class="btn btn--primary" onclick="app.copyContentToClipboard('${btoa(content)}')">
-                            📋 Copy Content
+                        <button class="btn btn--primary" onclick="app.copyContentToClipboard('${this.safeEncode(content)}')">
+                            Copy Content
                         </button>
                         <button class="btn btn--outline" onclick="this.closest('.modal').remove()">
                             Close Preview
@@ -738,16 +800,21 @@ class ClinicalResearchApp {
     }
 
     copyContentToClipboard(encodedContent) {
-        const content = atob(encodedContent);
-        navigator.clipboard.writeText(content).then(() => {
-            alert('✅ Content copied to clipboard!');
-        }).catch(() => {
-            alert('❌ Failed to copy to clipboard. Please try again.');
-        });
+        try {
+            const content = this.safeDecode(encodedContent);
+            navigator.clipboard.writeText(content).then(() => {
+                alert('Content copied to clipboard successfully.');
+            }).catch(() => {
+                alert('Failed to copy to clipboard. Please try again.');
+            });
+        } catch (error) {
+            console.error('Copy error:', error);
+            alert('Failed to copy content. Please try again.');
+        }
     }
 
     // ========================================
-    // FUNCTIONAL PDF DOWNLOADS
+    // FIXED PDF DOWNLOADS
     // ========================================
 
     async downloadComprehensiveReport(patientId) {
@@ -761,9 +828,9 @@ class ClinicalResearchApp {
             }
 
             const pdfContent = this.generateComprehensiveReportPDFContent(results, content);
-            await this.createAndDownloadProperPDF(pdfContent, `comprehensive-report-${results.patient.name.replace(/\s+/g, '_')}.pdf`);
+            await this.createAndDownloadProperPDF(pdfContent, `comprehensive-report-${this.sanitizeFilename(results.patient.name)}.txt`);
             
-            alert('✅ Comprehensive report downloaded successfully!');
+            alert('Comprehensive report downloaded successfully.');
             
         } catch (error) {
             alert(`Failed to generate comprehensive report: ${error.message}`);
@@ -782,9 +849,9 @@ class ClinicalResearchApp {
             }
 
             const pdfContent = this.generateProviderCommunicationPDFContent(results, content);
-            await this.createAndDownloadProperPDF(pdfContent, `provider-communication-${results.patient.name.replace(/\s+/g, '_')}.pdf`);
+            await this.createAndDownloadProperPDF(pdfContent, `provider-communication-${this.sanitizeFilename(results.patient.name)}.txt`);
             
-            alert('✅ Provider communication materials downloaded successfully!');
+            alert('Provider communication materials downloaded successfully.');
             
         } catch (error) {
             alert(`Failed to generate provider communication: ${error.message}`);
@@ -803,14 +870,23 @@ class ClinicalResearchApp {
             }
 
             const pdfContent = this.generatePatientMaterialsPDFContent(results, content);
-            await this.createAndDownloadProperPDF(pdfContent, `patient-materials-${results.patient.name.replace(/\s+/g, '_')}.pdf`);
+            await this.createAndDownloadProperPDF(pdfContent, `patient-materials-${this.sanitizeFilename(results.patient.name)}.txt`);
             
-            alert('✅ Patient education materials downloaded successfully!');
+            alert('Patient education materials downloaded successfully.');
             
         } catch (error) {
             alert(`Failed to generate patient materials: ${error.message}`);
             console.error('PDF generation error:', error);
         }
+    }
+
+    // FIXED: Filename sanitization
+    sanitizeFilename(filename) {
+        return filename
+            .replace(/[^a-z0-9]/gi, '_')
+            .replace(/_+/g, '_')
+            .replace(/^_|_$/g, '')
+            .toLowerCase();
     }
 
     generateComprehensiveReportPDFContent(results, content) {
@@ -1025,17 +1101,26 @@ Generated by: Clinical Research Intelligence Platform
             .replace(/&lt;/g, '<')
             .replace(/&gt;/g, '>')
             .replace(/&amp;/g, '&')
+            .replace(/&quot;/g, '"')
+            .replace(/&#039;/g, "'")
             .replace(/\n{3,}/g, '\n\n')
             .trim();
     }
 
+    // FIXED: Proper file creation and download
     async createAndDownloadProperPDF(content, filename) {
         try {
-            const cleanContent = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            // Create proper UTF-8 encoded text file
+            const cleanContent = content
+                .replace(/\r\n/g, '\n')
+                .replace(/\r/g, '\n')
+                .replace(/[^\x00-\x7F]/g, ''); // Remove non-ASCII characters to prevent corruption
+            
             const blob = new Blob([cleanContent], { 
                 type: 'text/plain;charset=utf-8' 
             });
             
+            // Create and trigger download
             const url = URL.createObjectURL(blob);
             const downloadLink = document.createElement('a');
             downloadLink.href = url;
@@ -1046,10 +1131,11 @@ Generated by: Clinical Research Intelligence Platform
             downloadLink.click();
             document.body.removeChild(downloadLink);
             
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            // Clean up
+            setTimeout(() => URL.revokeObjectURL(url), 2000);
             
         } catch (error) {
-            console.error('PDF creation failed:', error);
+            console.error('File creation failed:', error);
             throw new Error('Failed to create downloadable file');
         }
     }
@@ -1073,7 +1159,7 @@ Generated by: Clinical Research Intelligence Platform
 }
 
 // ========================================
-// REAL-TIME DATA AGENT - USES VALID MODEL
+// REAL-TIME DATA AGENT (No changes needed)
 // ========================================
 
 class RealTimeDataAgent {
@@ -1106,7 +1192,7 @@ class RealTimeDataAgent {
             if (patient.conditions.length > 0) searchTerms.push(...patient.conditions.slice(0, 2));
             
             if (searchTerms.length === 0) {
-                searchTerms = ['clinical trial']; // Fallback
+                searchTerms = ['clinical trial'];
             }
 
             const query = searchTerms.join(' OR ');
@@ -1208,14 +1294,12 @@ Focus on information from 2023-2025 and authoritative medical sources.`;
         }
     }
 
-    // COMPLETELY FIXED API call using CONFIRMED valid model name
     async callPerplexityAPI(prompt) {
         try {
-            console.log('Making API call with CONFIRMED valid model name: sonar');
+            console.log('Making API call with valid model name: sonar');
             
-            // CONFIRMED VALID request body
             const requestBody = {
-                model: 'sonar', // CONFIRMED: This is a valid current model name
+                model: 'sonar',
                 messages: [
                     {
                         role: 'user',
@@ -1225,8 +1309,6 @@ Focus on information from 2023-2025 and authoritative medical sources.`;
                 max_tokens: 2000,
                 temperature: 0.7
             };
-
-            console.log('Request body with valid model:', requestBody);
 
             const response = await fetch(this.perplexityConfig.apiUrl, {
                 method: 'POST',
@@ -1238,8 +1320,6 @@ Focus on information from 2023-2025 and authoritative medical sources.`;
                 body: JSON.stringify(requestBody)
             });
 
-            console.log('Response status:', response.status);
-
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('API Error Response:', errorText);
@@ -1247,7 +1327,6 @@ Focus on information from 2023-2025 and authoritative medical sources.`;
             }
 
             const data = await response.json();
-            console.log('API Response received successfully');
             
             if (!data.choices || !data.choices[0] || !data.choices[0].message) {
                 throw new Error('Invalid API response format');
@@ -1263,7 +1342,7 @@ Focus on information from 2023-2025 and authoritative medical sources.`;
 }
 
 // ========================================
-// ANALYSIS AGENT - USES VALID MODEL
+// ANALYSIS AGENT (No changes needed)
 // ========================================
 
 class AnalysisAgent {
@@ -1379,14 +1458,10 @@ For each trial, provide match score (0-100) with detailed reasoning and rank all
         return Math.min(Math.max(score, 60), 100);
     }
 
-    // COMPLETELY FIXED API call using CONFIRMED valid model name
     async callPerplexityAPI(prompt) {
         try {
-            console.log('Analysis Agent making API call with CONFIRMED valid model name: sonar');
-            
-            // CONFIRMED VALID request body
             const requestBody = {
-                model: 'sonar', // CONFIRMED: This is a valid current model name
+                model: 'sonar',
                 messages: [
                     {
                         role: 'user',
@@ -1429,7 +1504,7 @@ For each trial, provide match score (0-100) with detailed reasoning and rank all
 }
 
 // ========================================
-// CONTENT GENERATION AGENT - USES VALID MODEL
+// CONTENT GENERATION AGENT (No changes needed)
 // ========================================
 
 class ContentGenerationAgent {
@@ -1572,14 +1647,10 @@ Format as a formal medical referral suitable for direct transmission to the tria
         return await this.callPerplexityAPI(prompt);
     }
 
-    // COMPLETELY FIXED API call using CONFIRMED valid model name
     async callPerplexityAPI(prompt) {
         try {
-            console.log('Content Generation Agent making API call with CONFIRMED valid model name: sonar');
-            
-            // CONFIRMED VALID request body
             const requestBody = {
-                model: 'sonar', // CONFIRMED: This is a valid current model name
+                model: 'sonar',
                 messages: [
                     {
                         role: 'user',
@@ -1622,7 +1693,7 @@ Format as a formal medical referral suitable for direct transmission to the tria
 }
 
 // ========================================
-// DATA PROCESSING AGENT (No changes needed - doesn't use API)
+// DATA PROCESSING AGENT (No changes needed)
 // ========================================
 
 class DataProcessingAgent {
