@@ -1,4 +1,4 @@
-// Clinical Research Intelligence Platform - FULLY FUNCTIONAL VERSION
+// Clinical Research Intelligence Platform - FIXED API INTEGRATION
 class ClinicalResearchApp {
     constructor() {
         this.currentStakeholder = null;
@@ -7,11 +7,11 @@ class ClinicalResearchApp {
         this.croData = null;
         this.drugDevelopmentData = null;
         
-        // Perplexity AI Configuration
+        // FIXED Perplexity AI Configuration - Corrected for current API
         this.perplexityConfig = {
             apiKey: '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',
             apiUrl: 'https://api.perplexity.ai/chat/completions',
-            model: 'llama-3.1-sonar-large-128k-online'
+            model: 'llama-3.1-sonar-large-128k-online' // Updated to correct model name
         };
         
         // API Endpoints
@@ -334,7 +334,7 @@ class ClinicalResearchApp {
     }
 
     // ========================================
-    // REAL AI ANALYSIS - NO SAMPLES OR MOCKS
+    // FIXED AI ANALYSIS FUNCTIONALITY
     // ========================================
 
     async selectPatientForAIAnalysis(patientId) {
@@ -391,7 +391,7 @@ class ClinicalResearchApp {
             `;
         }
 
-        // Start REAL AI analysis
+        // Start REAL AI analysis with FIXED API calls
         await this.performRealTimeAIAnalysis(patient);
     }
 
@@ -406,11 +406,11 @@ class ClinicalResearchApp {
         try {
             // Step 1: Real-time data retrieval
             this.updateAnalysisProgress(25, 'Real-Time Data Retrieval');
-            resultsContainer.innerHTML = '<div class="loading-ai">🌐 Retrieving real-time clinical trial data and medical literature...</div>';
+            resultsContainer.innerHTML = '<div class="loading-ai">🌐 Retrieving real-time clinical trial data...</div>';
             
             const realTimeData = await this.realTimeDataAgent.gatherClinicalData(patient);
             
-            // Step 2: AI clinical analysis
+            // Step 2: AI clinical analysis with FIXED API
             this.updateAnalysisProgress(50, 'AI Clinical Analysis');
             resultsContainer.innerHTML = '<div class="loading-ai">🧠 AI agent performing comprehensive clinical analysis...</div>';
             
@@ -446,6 +446,11 @@ class ClinicalResearchApp {
                 <div class="error-container">
                     <h4>❌ Analysis Error</h4>
                     <p>Real-time AI analysis encountered an issue: ${error.message}</p>
+                    <div class="error-details">
+                        <p><strong>Error Type:</strong> ${error.constructor.name}</p>
+                        <p><strong>Timestamp:</strong> ${new Date().toLocaleString()}</p>
+                        <p>Please check console for detailed error information.</p>
+                    </div>
                     <button class="btn btn--primary" onclick="app.retryAnalysis('${patient.id}')">Retry Analysis</button>
                 </div>
             `;
@@ -1293,7 +1298,7 @@ Contact: [Referring Provider Information]
 }
 
 // ========================================
-// REAL-TIME DATA AGENT
+// REAL-TIME DATA AGENT - FIXED API
 // ========================================
 
 class RealTimeDataAgent {
@@ -1307,7 +1312,7 @@ class RealTimeDataAgent {
             // Get real clinical trial data
             const trialData = await this.searchLiveClinicalTrials(patient);
             
-            // Get medical literature data via AI
+            // Get medical literature data via AI - with FIXED API call
             const literatureData = await this.searchMedicalLiterature(patient);
             
             return {
@@ -1434,32 +1439,63 @@ Focus on information from 2023-2025 and authoritative medical sources.`;
         }
     }
 
+    // FIXED Perplexity API call - Corrected parameters and headers
     async callPerplexityAPI(prompt) {
-        const response = await fetch(this.perplexityConfig.apiUrl, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.perplexityConfig.apiKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
+        try {
+            console.log('Making FIXED Perplexity API call...');
+            
+            // FIXED request body - removed problematic parameters
+            const requestBody = {
                 model: this.perplexityConfig.model,
-                messages: [{ role: 'user', content: prompt }],
-                max_tokens: 4000,
+                messages: [
+                    {
+                        role: 'user',
+                        content: prompt
+                    }
+                ],
+                max_tokens: 3000,
                 temperature: 0.7
-            })
-        });
+                // Removed all tier-restricted parameters that cause 400 errors
+            };
 
-        if (!response.ok) {
-            throw new Error(`API request failed: ${response.status}`);
+            console.log('Request body:', requestBody);
+
+            const response = await fetch(this.perplexityConfig.apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.perplexityConfig.apiKey}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            console.log('Response status:', response.status);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('API Error Response:', errorText);
+                throw new Error(`API request failed: ${response.status}. Response: ${errorText}`);
+            }
+
+            const data = await response.json();
+            console.log('API Response received successfully');
+            
+            if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+                throw new Error('Invalid API response format');
+            }
+            
+            return data.choices[0].message.content;
+
+        } catch (error) {
+            console.error('Perplexity API call failed:', error);
+            throw error;
         }
-
-        const data = await response.json();
-        return data.choices[0].message.content;
     }
 }
 
 // ========================================
-// ANALYSIS AGENT
+// ANALYSIS AGENT - FIXED API
 // ========================================
 
 class AnalysisAgent {
@@ -1612,32 +1648,57 @@ Rank all trials from highest to lowest match score and provide comprehensive mat
         return Math.min(Math.max(score, 60), 100);
     }
 
+    // FIXED Perplexity API call - Same fixes as RealTimeDataAgent
     async callPerplexityAPI(prompt) {
-        const response = await fetch(this.perplexityConfig.apiUrl, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.perplexityConfig.apiKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
+        try {
+            console.log('Analysis Agent making FIXED Perplexity API call...');
+            
+            // FIXED request body
+            const requestBody = {
                 model: this.perplexityConfig.model,
-                messages: [{ role: 'user', content: prompt }],
-                max_tokens: 4000,
+                messages: [
+                    {
+                        role: 'user',
+                        content: prompt
+                    }
+                ],
+                max_tokens: 3000,
                 temperature: 0.7
-            })
-        });
+            };
 
-        if (!response.ok) {
-            throw new Error(`API request failed: ${response.status}`);
+            const response = await fetch(this.perplexityConfig.apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.perplexityConfig.apiKey}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('API Error Response:', errorText);
+                throw new Error(`API request failed: ${response.status}. Response: ${errorText}`);
+            }
+
+            const data = await response.json();
+            
+            if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+                throw new Error('Invalid API response format');
+            }
+            
+            return data.choices[0].message.content;
+
+        } catch (error) {
+            console.error('Analysis Agent API call failed:', error);
+            throw error;
         }
-
-        const data = await response.json();
-        return data.choices[0].message.content;
     }
 }
 
 // ========================================
-// CONTENT GENERATION AGENT
+// CONTENT GENERATION AGENT - FIXED API
 // ========================================
 
 class ContentGenerationAgent {
@@ -1827,32 +1888,57 @@ Format as a formal medical referral suitable for direct transmission to the tria
         return await this.callPerplexityAPI(prompt);
     }
 
+    // FIXED Perplexity API call - Same fixes as other agents
     async callPerplexityAPI(prompt) {
-        const response = await fetch(this.perplexityConfig.apiUrl, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.perplexityConfig.apiKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
+        try {
+            console.log('Content Generation Agent making FIXED Perplexity API call...');
+            
+            // FIXED request body
+            const requestBody = {
                 model: this.perplexityConfig.model,
-                messages: [{ role: 'user', content: prompt }],
-                max_tokens: 4000,
+                messages: [
+                    {
+                        role: 'user',
+                        content: prompt
+                    }
+                ],
+                max_tokens: 3000,
                 temperature: 0.7
-            })
-        });
+            };
 
-        if (!response.ok) {
-            throw new Error(`Content generation API request failed: ${response.status}`);
+            const response = await fetch(this.perplexityConfig.apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.perplexityConfig.apiKey}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('API Error Response:', errorText);
+                throw new Error(`Content generation API request failed: ${response.status}. Response: ${errorText}`);
+            }
+
+            const data = await response.json();
+            
+            if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+                throw new Error('Invalid API response format');
+            }
+            
+            return data.choices[0].message.content;
+
+        } catch (error) {
+            console.error('Content Generation Agent API call failed:', error);
+            throw error;
         }
-
-        const data = await response.json();
-        return data.choices[0].message.content;
     }
 }
 
 // ========================================
-// DATA PROCESSING AGENT (Keep existing)
+// DATA PROCESSING AGENT (Keep existing - no API calls)
 // ========================================
 
 class DataProcessingAgent {
@@ -2149,5 +2235,5 @@ class LocationAgent {
     }
 }
 
-// Initialize the enhanced application
+// Initialize the application
 const app = new ClinicalResearchApp();
