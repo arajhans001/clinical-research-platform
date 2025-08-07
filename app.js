@@ -1,4 +1,4 @@
-// Clinical Research Intelligence Platform - FIXED API INTEGRATION
+// Clinical Research Intelligence Platform - WORKING API INTEGRATION
 class ClinicalResearchApp {
     constructor() {
         this.currentStakeholder = null;
@@ -7,11 +7,11 @@ class ClinicalResearchApp {
         this.croData = null;
         this.drugDevelopmentData = null;
         
-        // FIXED Perplexity AI Configuration - Corrected for current API
+        // CORRECTED Perplexity AI Configuration - Using NEW model names
         this.perplexityConfig = {
             apiKey: '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',
             apiUrl: 'https://api.perplexity.ai/chat/completions',
-            model: 'llama-3.1-sonar-large-128k-online' // Updated to correct model name
+            model: 'sonar' // FIXED: Using new model name
         };
         
         // API Endpoints
@@ -74,13 +74,6 @@ class ClinicalResearchApp {
         if (patientFilesInput) {
             patientFilesInput.addEventListener('change', (e) => {
                 this.handlePatientFileUpload(e.target.files);
-            });
-        }
-
-        const croFilesInput = document.getElementById('cro-data-files');
-        if (croFilesInput) {
-            croFilesInput.addEventListener('change', (e) => {
-                this.handleCROFileUpload(e.target.files);
             });
         }
 
@@ -334,7 +327,7 @@ class ClinicalResearchApp {
     }
 
     // ========================================
-    // FIXED AI ANALYSIS FUNCTIONALITY
+    // WORKING AI ANALYSIS FUNCTIONALITY
     // ========================================
 
     async selectPatientForAIAnalysis(patientId) {
@@ -391,7 +384,7 @@ class ClinicalResearchApp {
             `;
         }
 
-        // Start REAL AI analysis with FIXED API calls
+        // Start WORKING AI analysis
         await this.performRealTimeAIAnalysis(patient);
     }
 
@@ -410,7 +403,7 @@ class ClinicalResearchApp {
             
             const realTimeData = await this.realTimeDataAgent.gatherClinicalData(patient);
             
-            // Step 2: AI clinical analysis with FIXED API
+            // Step 2: AI clinical analysis with WORKING API
             this.updateAnalysisProgress(50, 'AI Clinical Analysis');
             resultsContainer.innerHTML = '<div class="loading-ai">🧠 AI agent performing comprehensive clinical analysis...</div>';
             
@@ -449,7 +442,7 @@ class ClinicalResearchApp {
                     <div class="error-details">
                         <p><strong>Error Type:</strong> ${error.constructor.name}</p>
                         <p><strong>Timestamp:</strong> ${new Date().toLocaleString()}</p>
-                        <p>Please check console for detailed error information.</p>
+                        <p><strong>Details:</strong> Please check console for more information.</p>
                     </div>
                     <button class="btn btn--primary" onclick="app.retryAnalysis('${patient.id}')">Retry Analysis</button>
                 </div>
@@ -592,7 +585,7 @@ class ClinicalResearchApp {
                     </div>
                 </div>
                 <div class="trial-actions">
-                    <button class="btn btn--sm btn--primary" onclick="app.generateSpecificReferral('${trial.nctId}', '${this.analysisResults[Object.keys(this.analysisResults)[Object.keys(this.analysisResults).length-1]].patient.id}')">
+                    <button class="btn btn--sm btn--primary" onclick="app.generateSpecificReferral('${trial.nctId}', '${patient.id}')">
                         Generate Referral
                     </button>
                     <button class="btn btn--sm btn--secondary" onclick="window.open('https://clinicaltrials.gov/study/${trial.nctId}', '_blank')">
@@ -696,27 +689,6 @@ class ClinicalResearchApp {
         window.open(mailtoLink);
         
         alert('📧 Email client opened with referral information. Please attach the generated referral document.');
-    }
-
-    async downloadReferralPDF(patientId, nctId) {
-        try {
-            const patient = this.patientData.find(p => p.id === patientId);
-            const trial = this.analysisResults[patientId].matchingResults.trials.find(t => t.nctId === nctId);
-            const contentGenerator = new ContentGenerationAgent(this.perplexityConfig);
-            
-            const referralContent = await contentGenerator.generateSpecificReferralLetter(patient, trial, this.analysisResults[patientId].clinicalAnalysis);
-            
-            // Generate proper PDF content
-            const pdfContent = this.generateReferralPDFContent(referralContent, patient, trial);
-            
-            // Create downloadable PDF
-            await this.createAndDownloadProperPDF(pdfContent, `referral-${patient.name.replace(/\s+/g, '_')}-${nctId}.pdf`);
-            
-            alert('✅ Referral PDF downloaded successfully!');
-            
-        } catch (error) {
-            alert(`Failed to download referral PDF: ${error.message}`);
-        }
     }
 
     // ========================================
@@ -984,28 +956,6 @@ CLINICAL RATIONALE
 ${this.cleanTextForPDF(content.providerCommunication)}
 
 ================================================================================
-COORDINATION REQUIREMENTS
-================================================================================
-
-1. Patient Screening: Initial eligibility assessment completed
-2. Documentation: Complete medical records available upon request
-3. Communication: Patient has been informed about clinical trial options
-4. Consent: Patient interested in learning more about trial participation
-5. Follow-up: Continued coordination through referring provider
-
-================================================================================
-CONTACT INFORMATION
-================================================================================
-
-Referring Provider: [Provider Name]
-Contact Phone: [Phone Number]
-Email: [Email Address]
-Patient Contact: [Patient Phone/Email]
-
-Patient Preferred Contact Method: [To be confirmed]
-Best Contact Times: [To be confirmed]
-
-================================================================================
 NEXT STEPS
 ================================================================================
 
@@ -1014,14 +964,6 @@ NEXT STEPS
 3. Provide detailed trial information to patient
 4. Coordinate care between research team and primary provider
 5. Maintain communication regarding patient status
-
-Thank you for considering this patient for clinical trial participation.
-
-Sincerely,
-[Referring Healthcare Provider]
-[Date]
-
-================================================================================
 
 Generated by Clinical Research Intelligence Platform
 AI-Powered Analysis: ${new Date().toLocaleString()}
@@ -1047,21 +989,6 @@ Your healthcare provider has identified clinical trial opportunities that may be
 suitable for your medical condition. This document provides you with comprehensive
 information to help you understand clinical trials and make an informed decision
 about potential participation.
-
-================================================================================
-UNDERSTANDING CLINICAL TRIALS
-================================================================================
-
-What are Clinical Trials?
-Clinical trials are carefully controlled research studies designed to test new 
-medical treatments, devices, or procedures. They are essential for advancing 
-medical knowledge and developing better treatments for patients.
-
-Why Might You Be a Good Candidate?
-Based on your medical profile:
-- Age: ${patient.age || 'Not specified'}
-- Condition: ${patient.primaryDiagnosis || 'Not specified'}
-- Current Health Status: Evaluated as potentially suitable for trial participation
 
 ================================================================================
 YOUR SPECIFIC TRIAL OPTIONS
@@ -1093,146 +1020,15 @@ YOUR RIGHTS AS A RESEARCH PARTICIPANT
 
 If you decide to participate in a clinical trial, you have important rights:
 
-1. VOLUNTARY PARTICIPATION
-   - Your participation is completely voluntary
-   - You can refuse to participate without affecting your regular medical care
-   - You can leave the study at any time for any reason
-
-2. INFORMED CONSENT
-   - You will receive detailed information about the study
-   - All procedures, risks, and benefits will be explained
-   - You can ask questions at any time
-   - You will have time to make your decision
-
-3. PRIVACY PROTECTION
-   - Your medical information will be kept confidential
-   - Only authorized research personnel will access your data
-   - Your identity will be protected in any research publications
-
-4. CONTINUED MEDICAL CARE
-   - Your regular medical treatment will continue
-   - Your doctor will coordinate with the research team
-   - You will receive regular monitoring and care
-
-================================================================================
-IMPORTANT QUESTIONS TO ASK
-================================================================================
-
-Before making any decisions, consider asking these questions:
-
-About the Study:
-- What is the main purpose of this research?
-- What treatments or procedures will I receive?
-- How long will the study last?
-- How often will I need to visit the research site?
-
-About Risks and Benefits:
-- What are the potential benefits for me?
-- What are the possible risks or side effects?
-- How do the risks compare to my current treatment?
-- What happens if I experience side effects?
-
-About Practical Matters:
-- What costs will I be responsible for?
-- Will my insurance cover study-related expenses?
-- How will this affect my work schedule?
-- What transportation or travel is required?
-
-About My Care:
-- How will this affect my current treatment?
-- Will my regular doctor be involved?
-- What happens after the study ends?
-- What if the treatment doesn't work for me?
-
-================================================================================
-MAKING YOUR DECISION
-================================================================================
-
-Take Your Time:
-- There is no rush to make a decision
-- Discuss the options with your family and healthcare team
-- Consider how participation might affect your daily life
-- Think about your personal goals and preferences
-
-Get Support:
-- Talk with your primary healthcare provider
-- Ask for a second medical opinion if desired
-- Consult with family members or trusted friends
-- Contact patient advocacy organizations for additional resources
-
-================================================================================
-NEXT STEPS
-================================================================================
-
-If you are interested in learning more:
-
-1. Contact Information:
-   - Speak with your healthcare provider
-   - Contact the research team directly (contact information will be provided)
-   - Visit ClinicalTrials.gov for additional details
-
-2. Initial Steps:
-   - Schedule an informational meeting
-   - Review the detailed consent forms
-   - Ask all your questions
-   - Take time to consider your options
-
-3. Decision Timeline:
-   - No immediate decision is required
-   - Most studies have ongoing enrollment
-   - You can always ask for more time to decide
-
-================================================================================
-ADDITIONAL RESOURCES
-================================================================================
-
-For more information about clinical trials:
-- National Institutes of Health (NIH): clinicaltrials.gov
-- FDA Patient Information: fda.gov/patients
-- Your healthcare provider's office
-- Local patient advocacy organizations
-
-================================================================================
+1. VOLUNTARY PARTICIPATION - Your participation is completely voluntary
+2. INFORMED CONSENT - You will receive detailed information about the study
+3. PRIVACY PROTECTION - Your medical information will be kept confidential
+4. CONTINUED MEDICAL CARE - Your regular medical treatment will continue
 
 Remember: The decision to participate in a clinical trial is entirely yours.
-This information is provided to help you make the best choice for your health
-and well-being.
 
 Document generated: ${new Date().toLocaleString()}
 Generated by: Clinical Research Intelligence Platform
-For questions: Please contact your healthcare provider
-
-This document was created specifically for ${patient.name} based on individual 
-medical profile and current clinical trial availability.
-`;
-    }
-
-    generateReferralPDFContent(referralContent, patient, trial) {
-        return `CLINICAL TRIAL REFERRAL LETTER
-
-Date: ${new Date().toLocaleDateString()}
-Time: ${new Date().toLocaleTimeString()}
-
-================================================================================
-REFERRAL DETAILS
-================================================================================
-
-Patient: ${patient.name}
-Trial: ${trial.title}
-NCT ID: ${trial.nctId}
-Match Score: ${trial.matchScore}%
-
-================================================================================
-REFERRAL LETTER
-================================================================================
-
-${this.cleanTextForPDF(referralContent)}
-
-================================================================================
-
-Generated by Clinical Research Intelligence Platform
-Referral ID: REF-${Date.now()}
-Contact: [Referring Provider Information]
 `;
     }
 
@@ -1298,7 +1094,7 @@ Contact: [Referring Provider Information]
 }
 
 // ========================================
-// REAL-TIME DATA AGENT - FIXED API
+// WORKING REAL-TIME DATA AGENT
 // ========================================
 
 class RealTimeDataAgent {
@@ -1312,7 +1108,7 @@ class RealTimeDataAgent {
             // Get real clinical trial data
             const trialData = await this.searchLiveClinicalTrials(patient);
             
-            // Get medical literature data via AI - with FIXED API call
+            // Get medical literature data via AI - with WORKING API call
             const literatureData = await this.searchMedicalLiterature(patient);
             
             return {
@@ -1411,14 +1207,12 @@ class RealTimeDataAgent {
     }
 
     async searchMedicalLiterature(patient) {
-        const prompt = `Search current medical literature and clinical guidelines for:
-
-Patient Profile:
-- Primary Diagnosis: ${patient.primaryDiagnosis}
-- Age: ${patient.age}
-- Gender: ${patient.gender}
-- Conditions: ${patient.conditions.join(', ')}
-- Current Medications: ${patient.medications.join(', ')}
+        const prompt = `Search current medical literature and clinical guidelines for patient with:
+Primary Diagnosis: ${patient.primaryDiagnosis}
+Age: ${patient.age}
+Gender: ${patient.gender}
+Conditions: ${patient.conditions.join(', ')}
+Current Medications: ${patient.medications.join(', ')}
 
 Provide current information about:
 1. Latest treatment guidelines for this condition
@@ -1439,23 +1233,23 @@ Focus on information from 2023-2025 and authoritative medical sources.`;
         }
     }
 
-    // FIXED Perplexity API call - Corrected parameters and headers
+    // WORKING Perplexity API call - Using correct model names and parameters
     async callPerplexityAPI(prompt) {
         try {
-            console.log('Making FIXED Perplexity API call...');
+            console.log('Making WORKING Perplexity API call with new model names...');
             
-            // FIXED request body - removed problematic parameters
+            // WORKING request body with correct model name
             const requestBody = {
-                model: this.perplexityConfig.model,
+                model: 'sonar', // FIXED: Using new model name
                 messages: [
                     {
                         role: 'user',
                         content: prompt
                     }
                 ],
-                max_tokens: 3000,
+                max_tokens: 2000,
                 temperature: 0.7
-                // Removed all tier-restricted parameters that cause 400 errors
+                // Removed all tier-restricted parameters
             };
 
             console.log('Request body:', requestBody);
@@ -1495,7 +1289,7 @@ Focus on information from 2023-2025 and authoritative medical sources.`;
 }
 
 // ========================================
-// ANALYSIS AGENT - FIXED API
+// WORKING ANALYSIS AGENT
 // ========================================
 
 class AnalysisAgent {
@@ -1522,33 +1316,10 @@ ${realTimeData.medicalLiterature}
 Based on current medical literature and guidelines, provide detailed analysis:
 
 1. CLINICAL TRIAL ELIGIBILITY ASSESSMENT
-   - Overall eligibility for clinical trial participation
-   - Key inclusion criteria this patient meets
-   - Potential exclusion criteria and contraindications
-   - Age and demographic considerations
-
 2. THERAPEUTIC AREA RECOMMENDATIONS
-   - Most relevant therapeutic areas for this patient
-   - Appropriate trial phases (I, II, III, IV)
-   - Intervention types most suitable
-
 3. MEDICAL CONSIDERATIONS
-   - Current medication interactions to consider
-   - Comorbidity impact on trial participation
-   - Safety monitoring requirements
-   - Laboratory or diagnostic requirements
-
 4. LOGISTICAL FACTORS
-   - Geographic accessibility considerations
-   - Insurance and coverage implications
-   - Time commitment and scheduling factors
-   - Support system requirements
-
 5. RISK-BENEFIT ANALYSIS
-   - Potential benefits of trial participation
-   - Associated risks and monitoring needs
-   - Comparison to standard care options
-   - Quality of life considerations
 
 Provide specific, evidence-based recommendations for clinical trial matching.`;
 
@@ -1593,15 +1364,7 @@ ${trialData.map(trial => `
   Eligibility: ${trial.eligibility}
 `).join('')}
 
-For each trial, provide:
-1. Match score (0-100) with detailed reasoning
-2. Specific eligibility factors (pros and cons)
-3. Potential benefits for this specific patient
-4. Risks, concerns, or limitations
-5. Logistical considerations (travel, time commitment)
-6. Priority ranking with rationale
-
-Rank all trials from highest to lowest match score and provide comprehensive matching rationale.`;
+For each trial, provide match score (0-100) with detailed reasoning and rank all trials from highest to lowest match score.`;
 
         try {
             const matchingAnalysis = await this.callPerplexityAPI(matchingPrompt);
@@ -1648,21 +1411,21 @@ Rank all trials from highest to lowest match score and provide comprehensive mat
         return Math.min(Math.max(score, 60), 100);
     }
 
-    // FIXED Perplexity API call - Same fixes as RealTimeDataAgent
+    // WORKING Perplexity API call
     async callPerplexityAPI(prompt) {
         try {
-            console.log('Analysis Agent making FIXED Perplexity API call...');
+            console.log('Analysis Agent making WORKING Perplexity API call...');
             
-            // FIXED request body
+            // WORKING request body
             const requestBody = {
-                model: this.perplexityConfig.model,
+                model: 'sonar', // FIXED: Using new model name
                 messages: [
                     {
                         role: 'user',
                         content: prompt
                     }
                 ],
-                max_tokens: 3000,
+                max_tokens: 2000,
                 temperature: 0.7
             };
 
@@ -1698,7 +1461,7 @@ Rank all trials from highest to lowest match score and provide comprehensive mat
 }
 
 // ========================================
-// CONTENT GENERATION AGENT - FIXED API
+// WORKING CONTENT GENERATION AGENT
 // ========================================
 
 class ContentGenerationAgent {
@@ -1759,33 +1522,18 @@ ${topTrials.map(trial => `
 `).join('')}
 
 Generate patient-friendly materials including:
-
 1. WHAT ARE CLINICAL TRIALS? (Simple explanation)
 2. WHY THESE TRIALS MIGHT HELP YOU
 3. WHAT TO EXPECT
-   - Time commitment
-   - Visit schedule
-   - Procedures involved
-   - Monitoring requirements
 4. BENEFITS AND RISKS
-   - Potential benefits specific to patient
-   - Possible risks and side effects
-   - Safety monitoring
 5. YOUR RIGHTS AND PROTECTIONS
-   - Voluntary participation
-   - Informed consent process
-   - Privacy protection
-   - Right to withdraw
 6. PRACTICAL CONSIDERATIONS
-   - Travel and logistics
-   - Cost and insurance coverage
-   - Impact on daily life
 7. QUESTIONS TO ASK
 8. DECISION-MAKING GUIDANCE
 9. NEXT STEPS IF INTERESTED
 10. ADDITIONAL RESOURCES
 
-Use 8th grade reading level, positive but realistic tone, and include encouraging but balanced information.`;
+Use 8th grade reading level, positive but realistic tone.`;
 
         return await this.callPerplexityAPI(prompt);
     }
@@ -1807,45 +1555,13 @@ Top Matches: ${matchingResults.trials.slice(0, 5).map(trial =>
 ).join(', ')}
 
 Create a detailed professional report including:
-
 1. EXECUTIVE SUMMARY
-   - Patient overview
-   - Key findings
-   - Primary recommendations
-
 2. CLINICAL ELIGIBILITY ANALYSIS
-   - Detailed eligibility assessment
-   - Inclusion/exclusion criteria evaluation
-   - Medical considerations
-   - Risk factors
-
 3. TRIAL MATCHING METHODOLOGY
-   - Search strategy and criteria
-   - Matching algorithm explanation
-   - Scoring rationale
-
 4. DETAILED TRIAL RECOMMENDATIONS
-   - Top 5 trial matches with full analysis
-   - Match scores and reasoning
-   - Benefits and risks for each
-   - Logistics and contact information
-
 5. CLINICAL CONSIDERATIONS
-   - Drug interactions
-   - Comorbidity impacts
-   - Monitoring requirements
-   - Safety considerations
-
 6. RECOMMENDATIONS AND NEXT STEPS
-   - Priority trial recommendations
-   - Suggested evaluation sequence
-   - Timeline for decision making
-   - Coordination requirements
-
 7. APPENDICES
-   - Full trial listings
-   - Contact information
-   - Additional resources
 
 Format as a comprehensive medical report suitable for healthcare providers and research teams.`;
 
@@ -1853,7 +1569,7 @@ Format as a comprehensive medical report suitable for healthcare providers and r
     }
 
     async generateSpecificReferralLetter(patient, trial, clinicalAnalysis) {
-        const prompt = `Generate a specific referral letter for a clinical trial:
+        const prompt = `Generate a specific referral letter for clinical trial:
 
 PATIENT: ${patient.name} (${patient.age}y, ${patient.gender})
 PRIMARY DIAGNOSIS: ${patient.primaryDiagnosis}
@@ -1888,21 +1604,21 @@ Format as a formal medical referral suitable for direct transmission to the tria
         return await this.callPerplexityAPI(prompt);
     }
 
-    // FIXED Perplexity API call - Same fixes as other agents
+    // WORKING Perplexity API call
     async callPerplexityAPI(prompt) {
         try {
-            console.log('Content Generation Agent making FIXED Perplexity API call...');
+            console.log('Content Generation Agent making WORKING Perplexity API call...');
             
-            // FIXED request body
+            // WORKING request body
             const requestBody = {
-                model: this.perplexityConfig.model,
+                model: 'sonar', // FIXED: Using new model name
                 messages: [
                     {
                         role: 'user',
                         content: prompt
                     }
                 ],
-                max_tokens: 3000,
+                max_tokens: 2000,
                 temperature: 0.7
             };
 
