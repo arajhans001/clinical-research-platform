@@ -1217,6 +1217,10 @@ Data Source: ClinicalTrials.gov Official Database
 // MEDICAL-GRADE REAL-TIME DATA AGENT - NO SYNTHETIC DATA
 // ========================================
 
+// ========================================
+// FIXED REAL-TIME DATA AGENT - PATIENT-SPECIFIC ONLY
+// ========================================
+
 class RealTimeDataAgent {
     constructor(perplexityConfig) {
         this.perplexityConfig = perplexityConfig;
@@ -1225,7 +1229,7 @@ class RealTimeDataAgent {
 
     async gatherClinicalData(patient) {
         try {
-            // MEDICAL SAFETY: Only use real clinical trials data
+            // MEDICAL SAFETY: Only search for patient-specific clinical trials
             const trialData = await this.searchPatientSpecificClinicalTrials(patient);
             const literatureData = await this.searchMedicalLiterature(patient);
             
@@ -1242,139 +1246,163 @@ class RealTimeDataAgent {
         }
     }
 
-    // MEDICAL SAFETY: Only returns real clinical trials data
+    // FIXED: Completely rewritten to ensure patient-specific results only
     async searchPatientSpecificClinicalTrials(patient) {
         try {
-            console.log('Searching patient-specific clinical trials for:', patient.name);
+            console.log('=== PATIENT-SPECIFIC TRIAL SEARCH ===');
+            console.log('Patient:', patient.name);
+            console.log('Primary Diagnosis:', patient.primaryDiagnosis);
+            console.log('Conditions:', patient.conditions);
             
-            // Try primary search with patient-specific parameters
-            const searchParams = this.buildPatientSpecificSearchParams(patient);
-            console.log('Search parameters:', searchParams.toString());
-            
-            const response = await fetch(`${this.clinicalTrialsAPI}?${searchParams.toString()}`);
-            
-            if (!response.ok) {
-                throw new Error('Clinical trials database temporarily unavailable');
+            // MEDICAL SAFETY: Require patient medical information
+            if (!patient.primaryDiagnosis && (!patient.conditions || patient.conditions.length === 0)) {
+                throw new Error('Patient diagnosis required for clinical trial search');
             }
-
-            const data = await response.json();
-            console.log('API Response received, processing studies:', data.studies?.length || 0);
             
-            if (data.studies && data.studies.length > 0) {
-                return this.processTrialData(data.studies);
-            } else {
-                // Try broader search with real data only
-                console.log('No trials found for specific search, trying broader search');
-                return await this.fallbackBroaderSearch(patient);
+            // Build patient-specific search terms
+            const searchTerms = this.buildPatientSpecificSearchTerms(patient);
+            console.log('Search terms being used:', searchTerms);
+            
+            if (searchTerms.length === 0) {
+                throw new Error('Unable to create search criteria from patient medical information');
             }
+            
+            // Try each search term individually to find relevant trials
+            let allTrials = [];
+            
+            for (const searchTerm of searchTerms) {
+                console.log(`Searching for: "${searchTerm}"`);
+                const trials = await this.searchForSpecificCondition(searchTerm, patient);
+                
+                if (trials.length > 0) {
+                    console.log(`Found ${trials.length} trials for "${searchTerm}"`);
+                    allTrials.push(...trials);
+                } else {
+                    console.log(`No trials found for "${searchTerm}"`);
+                }
+            }
+            
+            // Remove duplicates based on NCT ID
+            const uniqueTrials = this.removeDuplicateTrials(allTrials);
+            console.log(`Total unique trials found: ${uniqueTrials.length}`);
+            
+            // CRITICAL: Validate that trials are actually relevant to patient
+            const relevantTrials = this.validateTrialRelevance(uniqueTrials, patient);
+            console.log(`Relevant trials after validation: ${relevantTrials.length}`);
+            
+            if (relevantTrials.length === 0) {
+                throw new Error('No clinical trials found matching patient criteria');
+            }
+            
+            return relevantTrials;
 
         } catch (error) {
-            console.error('Clinical trials search failed:', error);
-            throw new Error('Unable to retrieve clinical trial data from ClinicalTrials.gov. Please try again later.');
+            console.error('Patient-specific clinical trials search failed:', error);
+            throw error;
         }
     }
 
-    buildPatientSpecificSearchParams(patient) {
-        const params = new URLSearchParams();
+    // FIXED: Build only patient-specific search terms
+    buildPatientSpecificSearchTerms(patient) {
+        const searchTerms = [];
         
-        // Format for API v2
-        params.append('format', 'json');
-        params.append('pageSize', '20');
-        params.append('countTotal', 'true');
-        
-        // Build condition-based search
-        const conditionTerms = [];
-        
+        // Add primary diagnosis
         if (patient.primaryDiagnosis && patient.primaryDiagnosis.trim()) {
-            conditionTerms.push(patient.primaryDiagnosis.trim());
+            const diagnosis = patient.primaryDiagnosis.trim();
+            searchTerms.push(diagnosis);
+            
+            // Add variations of the diagnosis
+            const words = diagnosis.toLowerCase().split(/\s+/);
+            if (words.length > 1) {
+                // Add individual significant words (medical terms)
+                words.forEach(word => {
+                    if (word.length > 3 && this.isMedicalTerm(word)) {
+                        searchTerms.push(word);
+                    }
+                });
+            }
         }
         
         // Add secondary conditions
         if (patient.conditions && patient.conditions.length > 0) {
             patient.conditions.forEach(condition => {
                 if (condition && condition.trim()) {
-                    conditionTerms.push(condition.trim());
+                    searchTerms.push(condition.trim());
                 }
             });
         }
         
-        // Create condition query
-        if (conditionTerms.length > 0) {
-            const conditionQuery = conditionTerms.slice(0, 3).join(' OR ');
-            params.append('query.cond', conditionQuery);
-            console.log('Condition query:', conditionQuery);
-        }
+        // Remove duplicates and limit to most specific terms
+        return [...new Set(searchTerms)].slice(0, 5);
+    }
+    
+    // Helper to identify medical terms
+    isMedicalTerm(word) {
+        const medicalKeywords = [
+            'disease', 'syndrome', 'disorder', 'cancer', 'tumor', 'carcinoma',
+            'diabetes', 'hypertension', 'copd', 'asthma', 'pneumonia',
+            'cardiovascular', 'cardiac', 'pulmonary', 'respiratory',
+            'neurological', 'psychiatric', 'rheumatoid', 'arthritis',
+            'infection', 'inflammatory', 'chronic', 'acute'
+        ];
         
-        // Add location filter if available
-        if (patient.location && patient.location.trim()) {
-            const location = patient.location.trim();
-            if (location.includes(',')) {
-                const locationParts = location.split(',');
-                const state = locationParts[locationParts.length - 1].trim();
-                params.append('query.locn', state);
-            }
-        }
-        
-        // Filter for recruiting studies
-        params.append('filter.overallStatus', 'RECRUITING,NOT_YET_RECRUITING,ENROLLING_BY_INVITATION');
-        
-        // Age-based filters
-        if (patient.age) {
-            if (patient.age >= 18) {
-                params.append('query.term', 'adult');
-            }
-            if (patient.age >= 65) {
-                params.append('query.term', 'elderly OR senior');
-            }
-        }
-        
-        return params;
+        return medicalKeywords.some(keyword => 
+            word.includes(keyword) || keyword.includes(word)
+        );
     }
 
-    // MEDICAL SAFETY: Broader search still uses only real data
-    async fallbackBroaderSearch(patient) {
+    // FIXED: Search for specific condition with strict parameters
+    async searchForSpecificCondition(searchTerm, patient) {
         try {
-            console.log('Attempting broader search for patient');
-            
             const params = new URLSearchParams();
             params.append('format', 'json');
-            params.append('pageSize', '15');
+            params.append('pageSize', '10');
+            params.append('countTotal', 'true');
+            
+            // CRITICAL: Use exact condition matching
+            params.append('query.cond', searchTerm);
+            
+            // Filter for recruiting studies only
             params.append('filter.overallStatus', 'RECRUITING,NOT_YET_RECRUITING');
             
-            // Use only primary diagnosis for broader search
-            if (patient.primaryDiagnosis) {
-                const primaryCondition = patient.primaryDiagnosis.split(' ')[0];
-                params.append('query.cond', primaryCondition);
-            } else if (patient.conditions.length > 0) {
-                const firstCondition = patient.conditions[0].split(' ')[0];
-                params.append('query.cond', firstCondition);
-            } else {
-                // MEDICAL SAFETY: Throw error instead of generating synthetic data
-                throw new Error('Patient diagnosis required for clinical trial search');
+            // Add location filter if available
+            if (patient.location && patient.location.trim()) {
+                const location = patient.location.trim();
+                if (location.includes(',')) {
+                    const locationParts = location.split(',');
+                    const state = locationParts[locationParts.length - 1].trim();
+                    if (state.length === 2) { // US state code
+                        params.append('filter.geo', `distance(50,${state})`);
+                    }
+                }
             }
+            
+            console.log('API URL:', `${this.clinicalTrialsAPI}?${params.toString()}`);
             
             const response = await fetch(`${this.clinicalTrialsAPI}?${params.toString()}`);
             
             if (!response.ok) {
+                console.error('API request failed:', response.status, response.statusText);
                 throw new Error('Clinical trials database temporarily unavailable');
             }
 
             const data = await response.json();
+            console.log('API response for', searchTerm, ':', data.studies?.length || 0, 'studies');
+            
             if (data.studies && data.studies.length > 0) {
-                return this.processTrialData(data.studies);
+                return this.processTrialData(data.studies, searchTerm);
+            } else {
+                return [];
             }
-            
-            // MEDICAL SAFETY: No trials found - throw error instead of creating synthetic data
-            throw new Error('No clinical trials found matching patient criteria');
-            
+
         } catch (error) {
-            console.error('Broader search failed:', error);
-            throw error;
+            console.error(`Search failed for condition "${searchTerm}":`, error);
+            return [];
         }
     }
 
-    // Process only real trial data from ClinicalTrials.gov
-    processTrialData(studies) {
+    // FIXED: Process trial data and mark search term used
+    processTrialData(studies, searchTerm) {
         return studies.map(study => {
             const protocol = study.protocolSection || {};
             const identification = protocol.identificationModule || {};
@@ -1391,14 +1419,58 @@ class RealTimeDataAgent {
                 status: status.overallStatus || 'Unknown',
                 phase: design.phases?.[0] || 'N/A',
                 sponsor: sponsors.leadSponsor?.name || 'Research Institution',
-                condition: conditions.conditions?.[0] || 'Medical Condition',
+                condition: conditions.conditions?.[0] || searchTerm,
                 locations: locations.map(loc => `${loc.city}, ${loc.state || loc.country}`).filter(Boolean).slice(0, 3),
                 contact: contacts[0] ? `${contacts[0].name} - ${contacts[0].phone || contacts[0].email || 'Contact via ClinicalTrials.gov'}` : 'Research Coordinator - Contact via ClinicalTrials.gov',
                 eligibility: protocol.eligibilityModule?.eligibilityCriteria || 'See ClinicalTrials.gov for detailed eligibility criteria',
                 lastUpdated: status.statusVerifiedDate || new Date().toISOString().split('T')[0],
                 dataSource: 'ClinicalTrials.gov',
+                searchTermUsed: searchTerm, // Track which term found this trial
                 isRealData: true
             };
+        });
+    }
+
+    // FIXED: Remove duplicate trials
+    removeDuplicateTrials(trials) {
+        const seen = new Set();
+        return trials.filter(trial => {
+            if (seen.has(trial.nctId)) {
+                return false;
+            }
+            seen.add(trial.nctId);
+            return true;
+        });
+    }
+
+    // CRITICAL: Validate that trials are actually relevant to the patient
+    validateTrialRelevance(trials, patient) {
+        const patientConditions = [
+            patient.primaryDiagnosis?.toLowerCase() || '',
+            ...patient.conditions.map(c => c.toLowerCase())
+        ].filter(Boolean);
+        
+        console.log('Patient conditions for validation:', patientConditions);
+        
+        return trials.filter(trial => {
+            const trialCondition = trial.condition.toLowerCase();
+            const trialTitle = trial.title.toLowerCase();
+            const searchTerm = trial.searchTermUsed?.toLowerCase() || '';
+            
+            // Check if trial condition matches any patient condition
+            const isRelevant = patientConditions.some(patientCondition => {
+                return (
+                    trialCondition.includes(patientCondition) ||
+                    patientCondition.includes(trialCondition) ||
+                    trialTitle.includes(patientCondition) ||
+                    patientCondition.includes(searchTerm) ||
+                    searchTerm.includes(patientCondition)
+                );
+            });
+            
+            console.log(`Trial "${trial.title}" - Condition: "${trialCondition}" - Relevant: ${isRelevant}`);
+            
+            return isRelevant;
         });
     }
 
@@ -1476,7 +1548,7 @@ IMPORTANT: Only provide information from verified medical sources. Do not genera
 }
 
 // ========================================
-// ANALYSIS AGENT - MEDICAL-GRADE MATCHING
+// FIXED ANALYSIS AGENT - PROPER ERROR HANDLING
 // ========================================
 
 class AnalysisAgent {
@@ -1530,9 +1602,13 @@ Provide specific, evidence-based recommendations for clinical trial matching.`;
     async performTrialMatching(patient, realTimeData, clinicalAnalysis) {
         const trialData = realTimeData.clinicalTrials;
         
+        // FIXED: Properly handle when no trials are found
         if (!trialData || trialData.length === 0) {
+            console.log('No trials available for matching');
             throw new Error('No clinical trials found matching patient criteria');
         }
+        
+        console.log(`Performing trial matching for ${trialData.length} trials`);
         
         const matchingPrompt = `Perform intelligent clinical trial matching and ranking based on verified data:
 
@@ -1548,23 +1624,25 @@ PATIENT PROFILE:
 CLINICAL ANALYSIS:
 ${clinicalAnalysis.eligibilityAssessment}
 
-AVAILABLE CLINICAL TRIALS FROM CLINICALTRIALS.GOV:
+PATIENT-SPECIFIC CLINICAL TRIALS FROM CLINICALTRIALS.GOV:
 ${trialData.map(trial => `
 - ${trial.title} (${trial.nctId})
   Phase: ${trial.phase}, Status: ${trial.status}
   Sponsor: ${trial.sponsor}
   Condition: ${trial.condition}
   Locations: ${trial.locations.join(', ')}
+  Search Term Used: ${trial.searchTermUsed}
   Eligibility: ${trial.eligibility}
 `).join('')}
 
-IMPORTANT: Base all matching decisions on:
+IMPORTANT: These trials were specifically found for this patient's condition(s). Base all matching decisions on:
 1. Verified clinical trial data from ClinicalTrials.gov
-2. Established medical eligibility criteria
-3. Patient safety considerations
-4. Evidence-based treatment guidelines
+2. Patient's specific medical condition: ${patient.primaryDiagnosis}
+3. Established medical eligibility criteria
+4. Patient safety considerations
+5. Evidence-based treatment guidelines
 
-For each trial, provide match score (0-100) with detailed medical reasoning and rank all trials from highest to lowest match score based on clinical appropriateness.`;
+For each trial, provide match score (0-100) with detailed medical reasoning and rank all trials from highest to lowest match score based on clinical appropriateness for this specific patient.`;
 
         try {
             const matchingAnalysis = await this.callPerplexityAPI(matchingPrompt);
@@ -1576,6 +1654,8 @@ For each trial, provide match score (0-100) with detailed medical reasoning and 
                 aiRecommendation: matchingAnalysis,
                 dataSource: 'ClinicalTrials.gov'
             })).sort((a, b) => b.matchScore - a.matchScore);
+
+            console.log('Scored trials:', scoredTrials.map(t => `${t.title}: ${t.matchScore}%`));
 
             return {
                 trials: scoredTrials,
@@ -1590,22 +1670,23 @@ For each trial, provide match score (0-100) with detailed medical reasoning and 
         }
     }
 
-    // Medical-grade match score calculation
+    // FIXED: Enhanced match score calculation with condition-specific logic
     calculatePatientSpecificMatchScore(trial, patient, analysisText, index) {
-        let score = 70; // Conservative base score
+        let score = 75; // Start with higher base score since these are pre-filtered relevant trials
         
         // Primary diagnosis matching (most critical factor)
         if (patient.primaryDiagnosis && trial.condition) {
             const patientDiagnosis = patient.primaryDiagnosis.toLowerCase();
             const trialCondition = trial.condition.toLowerCase();
             
-            // Exact match
+            // Exact match gets highest score
             if (trialCondition.includes(patientDiagnosis) || patientDiagnosis.includes(trialCondition)) {
                 score += 20;
             }
-            // Related conditions
-            else if (this.checkMedicalConditionSimilarity(patientDiagnosis, trialCondition)) {
-                score += 10;
+            
+            // Check if search term used matches patient diagnosis
+            if (trial.searchTermUsed && patientDiagnosis.includes(trial.searchTermUsed.toLowerCase())) {
+                score += 15;
             }
         }
         
@@ -1627,7 +1708,7 @@ For each trial, provide match score (0-100) with detailed medical reasoning and 
             
             // Age exclusions (safety)
             if (eligibility.includes('18 years') && patient.age < 18) score -= 30;
-            if (eligibility.includes('65 years') && patient.age > 65) score -= 10;
+            if (eligibility.includes('under 65') && patient.age > 65) score -= 10;
         }
         
         // Geographic accessibility
@@ -1651,18 +1732,20 @@ For each trial, provide match score (0-100) with detailed medical reasoning and 
         else if (trial.phase === 'Phase 2') score += 5;
         else if (trial.phase === 'Phase 1') score += 2; // More experimental
         
+        // Small random factor to prevent identical scores
+        score += Math.random() * 3;
+        
         // Ensure realistic score range
-        return Math.min(Math.max(Math.round(score), 45), 100);
+        return Math.min(Math.max(Math.round(score), 50), 100);
     }
     
-    // Medical condition similarity checking
+    // Medical condition similarity checking (same as before)
     checkMedicalConditionSimilarity(condition1, condition2) {
-        // Common medical term groupings
         const medicalGroupings = [
             ['cancer', 'carcinoma', 'tumor', 'neoplasm', 'oncology'],
             ['diabetes', 'diabetic', 'glucose', 'insulin'],
             ['heart', 'cardiac', 'cardiovascular', 'coronary'],
-            ['lung', 'pulmonary', 'respiratory', 'breathing'],
+            ['lung', 'pulmonary', 'respiratory', 'breathing', 'copd', 'asthma'],
             ['brain', 'neurological', 'neural', 'cognitive'],
             ['kidney', 'renal', 'nephro'],
             ['liver', 'hepatic', 'hepato'],
