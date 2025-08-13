@@ -1,4 +1,6 @@
 // Clinical Research Intelligence Platform - Medical-Grade Safety Standards
+console.log("[CRP] app.js loaded");
+
 class ClinicalResearchApp {
     constructor() {
         this.currentStakeholder = null;
@@ -6,21 +8,21 @@ class ClinicalResearchApp {
         this.trialData = [];
         this.croData = null;
         this.drugDevelopmentData = null;
-        
+
         this.perplexityConfig = {
             apiKey: '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',
             apiUrl: 'https://api.perplexity.ai/chat/completions',
             model: 'sonar'
         };
-        
+
         this.clinicalTrialsAPI = 'https://clinicaltrials.gov/api/v2/studies';
         this.fdaAPI = 'https://api.fda.gov';
-        
+
         this.dataProcessingAgent = new DataProcessingAgent();
         this.locationAgent = new LocationAgent();
         this.realTimeDataAgent = new RealTimeDataAgent(this.perplexityConfig);
         this.analysisAgent = new AnalysisAgent(this.perplexityConfig);
-        
+
         this.charts = {};
         this.analysisResults = {};
         this.generatedContent = {};
@@ -91,19 +93,19 @@ class ClinicalResearchApp {
 
     selectStakeholder(stakeholder) {
         this.currentStakeholder = stakeholder;
-        
+
         const stakeholderNames = {
             physician: 'Physician Portal',
             pharma: 'Pharma Intelligence',
             cro: 'CRO Analytics'
         };
-        
+
         document.getElementById('current-stakeholder').textContent = stakeholderNames[stakeholder];
-        
+
         document.querySelectorAll('.dashboard-section').forEach(section => {
             section.classList.add('hidden');
         });
-        
+
         document.getElementById('welcome-section').classList.add('hidden');
         document.getElementById(`${stakeholder}-dashboard`).classList.remove('hidden');
         document.getElementById('stakeholder-modal').classList.add('hidden');
@@ -118,7 +120,7 @@ class ClinicalResearchApp {
 
         const uploadedData = [];
         const processingStatus = this.showProcessingStatus('Processing patient files...');
-        
+
         for (let file of files) {
             try {
                 processingStatus.updateMessage(`Processing ${file.name}...`);
@@ -148,7 +150,7 @@ class ClinicalResearchApp {
                 try {
                     const content = e.target.result;
                     let data;
-                    
+
                     if (file.name.endsWith('.csv')) {
                         data = this.parseCSV(content);
                     } else if (file.name.endsWith('.json')) {
@@ -158,7 +160,7 @@ class ClinicalResearchApp {
                     } else {
                         throw new Error('Unsupported file format. Please use CSV, JSON, or TXT files.');
                     }
-                    
+
                     resolve(data);
                 } catch (error) {
                     reject(error);
@@ -171,7 +173,7 @@ class ClinicalResearchApp {
     parseCSV(csvContent) {
         const lines = csvContent.split('\n').filter(line => line.trim());
         if (lines.length === 0) return [];
-        
+
         const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/[^a-z0-9]/g, '_'));
         const data = [];
 
@@ -193,7 +195,7 @@ class ClinicalResearchApp {
         const result = [];
         let current = '';
         let inQuotes = false;
-        
+
         for (let i = 0; i < line.length; i++) {
             const char = line[i];
             if (char === '"') {
@@ -206,7 +208,7 @@ class ClinicalResearchApp {
             }
         }
         result.push(current);
-        
+
         return result;
     }
 
@@ -222,7 +224,7 @@ class ClinicalResearchApp {
             </div>
         `;
         document.body.appendChild(statusDiv);
-        
+
         return {
             updateMessage: (newMessage) => {
                 const messageEl = statusDiv.querySelector('.processing-message');
@@ -238,12 +240,12 @@ class ClinicalResearchApp {
 
     async displayPatientsWithEnrichment(patients) {
         const patientList = document.getElementById('patient-list');
-        
+
         if (!patientList) {
             console.error('Patient list element not found');
             return;
         }
-        
+
         if (patients.length === 0) {
             patientList.innerHTML = '<div class="no-patients">No patients loaded. Please upload data or connect EMR.</div>';
             return;
@@ -324,7 +326,7 @@ class ClinicalResearchApp {
         if (analysisSection) {
             analysisSection.classList.remove('hidden');
         }
-        
+
         const summaryContainer = document.getElementById('selected-patient-summary');
         if (summaryContainer) {
             summaryContainer.innerHTML = `
@@ -370,7 +372,7 @@ class ClinicalResearchApp {
 
     async performRealTimeAIAnalysis(patient) {
         const resultsContainer = document.getElementById('ai-analysis-results');
-        
+
         if (!resultsContainer) {
             console.error('Results container not found');
             return;
@@ -380,24 +382,24 @@ class ClinicalResearchApp {
             // Step 1: Real-time data retrieval with patient-specific search
             this.updateAnalysisProgress(25, 'Real-Time Data Retrieval');
             resultsContainer.innerHTML = '<div class="loading-ai">Retrieving patient-specific clinical trial data from ClinicalTrials.gov...</div>';
-            
+
             const realTimeData = await this.realTimeDataAgent.gatherClinicalData(patient);
-            
+
             // Step 2: AI clinical analysis
             this.updateAnalysisProgress(50, 'AI Clinical Analysis');
             resultsContainer.innerHTML = '<div class="loading-ai">AI agent performing comprehensive clinical analysis...</div>';
-            
+
             const clinicalAnalysis = await this.analysisAgent.performClinicalAnalysis(patient, realTimeData);
-            
+
             // Step 3: Trial matching 
             this.updateAnalysisProgress(75, 'Trial Matching');
             resultsContainer.innerHTML = '<div class="loading-ai">AI matching patient to current clinical trials...</div>';
-            
+
             const matchingResults = await this.analysisAgent.performTrialMatching(patient, realTimeData, clinicalAnalysis);
-            
+
             // Step 4: Complete analysis
             this.updateAnalysisProgress(100, 'Analysis Complete');
-            
+
             // Store results
             this.storeCompleteAnalysisResults(patient.id, {
                 realTimeData,
@@ -405,7 +407,7 @@ class ClinicalResearchApp {
                 matchingResults,
                 patient
             });
-            
+
             // Display results
             if (matchingResults.trials.length > 0) {
                 resultsContainer.innerHTML = this.renderTrialMatchingResults(patient.id, clinicalAnalysis, matchingResults);
@@ -471,7 +473,7 @@ class ClinicalResearchApp {
     // MEDICAL SAFETY: Clear messaging when no trials are found
     renderNoTrialsFound(patient) {
         const condition = patient.primaryDiagnosis || patient.conditions[0] || 'the specified condition';
-        
+
         return `
             <div class="no-trials-container">
                 <div class="no-trials-header">
@@ -538,7 +540,7 @@ class ClinicalResearchApp {
     async expandSearchCriteria(patientId) {
         const patient = this.patientData.find(p => p.id === patientId);
         if (!patient) return;
-        
+
         const modal = document.createElement('div');
         modal.className = 'modal';
         modal.innerHTML = `
@@ -573,11 +575,11 @@ class ClinicalResearchApp {
     updateAnalysisProgress(percentage, stepName) {
         const progressFill = document.getElementById('analysis-progress');
         const steps = document.querySelectorAll('#progress-steps .step');
-        
+
         if (progressFill) {
             progressFill.style.width = percentage + '%';
         }
-        
+
         steps.forEach((step, index) => {
             step.classList.remove('active', 'completed');
             if (index < Math.floor(percentage / 25)) {
@@ -707,39 +709,39 @@ class ClinicalResearchApp {
 
     async selectTrialAndGenerateContent(nctId, patientId) {
         const loadingStatus = this.showProcessingStatus('Generating personalized materials for selected trial...');
-        
+
         try {
             const patient = this.patientData.find(p => p.id === patientId);
             const analysisResults = this.analysisResults[patientId];
-            
+
             if (!patient || !analysisResults) {
                 throw new Error('Patient data or analysis results not found');
             }
 
             const selectedTrial = analysisResults.matchingResults.trials.find(t => t.nctId === nctId);
-            
+
             if (!selectedTrial) {
                 throw new Error('Selected trial not found');
             }
 
             const contentGenerator = new ContentGenerationAgent(this.perplexityConfig);
-            
+
             const trialSpecificContent = {
                 referralLetter: await contentGenerator.generateSpecificReferralLetter(patient, selectedTrial, analysisResults.clinicalAnalysis),
                 providerCommunication: await contentGenerator.generateTrialSpecificProviderLetter(patient, selectedTrial, analysisResults.clinicalAnalysis),
                 patientEducation: await contentGenerator.generateTrialSpecificPatientMaterials(patient, selectedTrial),
                 analysisReport: await contentGenerator.generateTrialSpecificReport(patient, selectedTrial, analysisResults.clinicalAnalysis)
             };
-            
+
             this.selectedTrialContent[patientId] = {
                 selectedTrial,
                 content: trialSpecificContent
             };
-            
+
             loadingStatus.close();
             this.showDocumentsSection(patientId, selectedTrial);
             this.showGeneratedReferralModal(trialSpecificContent.referralLetter, patient, selectedTrial);
-            
+
         } catch (error) {
             loadingStatus.close();
             console.error('Trial selection error:', error);
@@ -750,11 +752,11 @@ class ClinicalResearchApp {
     showDocumentsSection(patientId, selectedTrial) {
         const documentsSection = document.getElementById(`documents-section-${patientId}`);
         const trialInfoDiv = document.getElementById(`selected-trial-info-${patientId}`);
-        
+
         if (documentsSection) {
             documentsSection.style.display = 'block';
         }
-        
+
         if (trialInfoDiv) {
             trialInfoDiv.innerHTML = `
                 <div class="selected-trial-banner">
@@ -772,9 +774,9 @@ class ClinicalResearchApp {
     showGeneratedReferralModal(referralContent, patient, trial) {
         const modal = document.createElement('div');
         modal.className = 'modal';
-        
+
         const cleanContent = this.cleanContentForDisplay(referralContent);
-        
+
         modal.innerHTML = `
             <div class="modal-content modal-large">
                 <div class="modal-header">
@@ -809,7 +811,7 @@ class ClinicalResearchApp {
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(modal);
     }
 
@@ -819,7 +821,7 @@ class ClinicalResearchApp {
 
     cleanContentForDisplay(content) {
         if (!content) return 'No content available';
-        
+
         return content
             .replace(/<[^>]*>/g, '')
             .replace(/&nbsp;/g, ' ')
@@ -873,7 +875,7 @@ class ClinicalResearchApp {
         document.body.appendChild(textArea);
         textArea.focus();
         textArea.select();
-        
+
         try {
             const successful = document.execCommand('copy');
             if (successful) {
@@ -884,7 +886,7 @@ class ClinicalResearchApp {
         } catch (err) {
             alert('Failed to copy content. Please select and copy manually.');
         }
-        
+
         document.body.removeChild(textArea);
     }
 
@@ -892,19 +894,19 @@ class ClinicalResearchApp {
         try {
             const patient = this.patientData.find(p => p.id === patientId);
             const trialContent = this.selectedTrialContent[patientId];
-            
+
             if (!trialContent) {
                 alert('Please select a trial first to generate referral materials.');
                 return;
             }
-            
+
             const trial = trialContent.selectedTrial;
             const subject = `Clinical Trial Referral - ${patient.name} - ${nctId}`;
             const body = `Please find the clinical trial referral for ${patient.name} regarding trial ${nctId} - ${trial.title}.\n\nThis referral was generated based on data from ClinicalTrials.gov. Please verify all trial details directly with the official source.`;
-            
+
             const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
             window.open(mailtoLink);
-            
+
             alert('Email client opened with referral information.');
         } catch (error) {
             console.error('Email error:', error);
@@ -918,7 +920,7 @@ class ClinicalResearchApp {
 
     previewProviderMaterials(patientId) {
         const trialContent = this.selectedTrialContent[patientId];
-        
+
         if (!trialContent || !trialContent.content.providerCommunication) {
             alert('Please select a trial first to generate provider materials.');
             return;
@@ -929,7 +931,7 @@ class ClinicalResearchApp {
 
     previewPatientMaterials(patientId) {
         const trialContent = this.selectedTrialContent[patientId];
-        
+
         if (!trialContent || !trialContent.content.patientEducation) {
             alert('Please select a trial first to generate patient materials.');
             return;
@@ -940,7 +942,7 @@ class ClinicalResearchApp {
 
     previewAnalysisReport(patientId) {
         const trialContent = this.selectedTrialContent[patientId];
-        
+
         if (!trialContent || !trialContent.content.analysisReport) {
             alert('Please select a trial first to generate analysis report.');
             return;
@@ -951,7 +953,7 @@ class ClinicalResearchApp {
 
     showPreviewModal(title, content) {
         const cleanContent = this.cleanContentForDisplay(content);
-        
+
         const modal = document.createElement('div');
         modal.className = 'modal';
         modal.innerHTML = `
@@ -978,7 +980,7 @@ class ClinicalResearchApp {
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(modal);
     }
 
@@ -989,7 +991,7 @@ class ClinicalResearchApp {
     downloadComprehensiveReport(patientId) {
         const trialContent = this.selectedTrialContent[patientId];
         const patient = this.patientData.find(p => p.id === patientId);
-        
+
         if (!trialContent || !patient) {
             alert('Please select a trial first to generate comprehensive report.');
             return;
@@ -1009,7 +1011,7 @@ class ClinicalResearchApp {
     downloadProviderCommunication(patientId) {
         const trialContent = this.selectedTrialContent[patientId];
         const patient = this.patientData.find(p => p.id === patientId);
-        
+
         if (!trialContent || !patient) {
             alert('Please select a trial first to generate provider communication.');
             return;
@@ -1029,7 +1031,7 @@ class ClinicalResearchApp {
     downloadPatientMaterials(patientId) {
         const trialContent = this.selectedTrialContent[patientId];
         const patient = this.patientData.find(p => p.id === patientId);
-        
+
         if (!trialContent || !patient) {
             alert('Please select a trial first to generate patient materials.');
             return;
@@ -1049,7 +1051,7 @@ class ClinicalResearchApp {
     downloadReferralFile(patientId, nctId) {
         const trialContent = this.selectedTrialContent[patientId];
         const patient = this.patientData.find(p => p.id === patientId);
-        
+
         if (!trialContent || !patient) {
             alert('Referral content not found.');
             return;
@@ -1072,23 +1074,23 @@ class ClinicalResearchApp {
                 .replace(/\r\n/g, '\n')
                 .replace(/\r/g, '\n')
                 .replace(/[^\x00-\x7F\n]/g, '');
-            
-            const blob = new Blob([cleanContent], { 
-                type: 'text/plain;charset=utf-8' 
+
+            const blob = new Blob([cleanContent], {
+                type: 'text/plain;charset=utf-8'
             });
-            
+
             const url = URL.createObjectURL(blob);
             const downloadLink = document.createElement('a');
             downloadLink.href = url;
             downloadLink.download = filename;
             downloadLink.style.display = 'none';
-            
+
             document.body.appendChild(downloadLink);
             downloadLink.click();
             document.body.removeChild(downloadLink);
-            
+
             setTimeout(() => URL.revokeObjectURL(url), 2000);
-            
+
         } catch (error) {
             console.error('File creation failed:', error);
             throw new Error('Failed to create downloadable file');
@@ -1105,7 +1107,7 @@ class ClinicalResearchApp {
 
     generateComprehensiveReportContent(patient, trialContent) {
         const trial = trialContent.selectedTrial;
-        
+
         return `COMPREHENSIVE CLINICAL TRIAL ANALYSIS REPORT
 
 Generated by Clinical Research Intelligence Platform
@@ -1197,7 +1199,7 @@ Data Source: ClinicalTrials.gov Official Database
 
     formatAIResponse(content) {
         if (!content) return 'No content available';
-        
+
         return content
             .replace(/\n\n/g, '</p><p>')
             .replace(/\n/g, '<br>')
@@ -1232,7 +1234,7 @@ class RealTimeDataAgent {
             // MEDICAL SAFETY: Only search for patient-specific clinical trials
             const trialData = await this.searchPatientSpecificClinicalTrials(patient);
             const literatureData = await this.searchMedicalLiterature(patient);
-            
+
             return {
                 clinicalTrials: trialData,
                 medicalLiterature: literatureData,
@@ -1253,27 +1255,27 @@ class RealTimeDataAgent {
             console.log('Patient:', patient.name);
             console.log('Primary Diagnosis:', patient.primaryDiagnosis);
             console.log('Conditions:', patient.conditions);
-            
+
             // MEDICAL SAFETY: Require patient medical information
             if (!patient.primaryDiagnosis && (!patient.conditions || patient.conditions.length === 0)) {
                 throw new Error('Patient diagnosis required for clinical trial search');
             }
-            
+
             // Build patient-specific search terms
             const searchTerms = this.buildPatientSpecificSearchTerms(patient);
             console.log('Search terms being used:', searchTerms);
-            
+
             if (searchTerms.length === 0) {
                 throw new Error('Unable to create search criteria from patient medical information');
             }
-            
+
             // Try each search term individually to find relevant trials
             let allTrials = [];
-            
+
             for (const searchTerm of searchTerms) {
                 console.log(`Searching for: "${searchTerm}"`);
                 const trials = await this.searchForSpecificCondition(searchTerm, patient);
-                
+
                 if (trials.length > 0) {
                     console.log(`Found ${trials.length} trials for "${searchTerm}"`);
                     allTrials.push(...trials);
@@ -1281,19 +1283,19 @@ class RealTimeDataAgent {
                     console.log(`No trials found for "${searchTerm}"`);
                 }
             }
-            
+
             // Remove duplicates based on NCT ID
             const uniqueTrials = this.removeDuplicateTrials(allTrials);
             console.log(`Total unique trials found: ${uniqueTrials.length}`);
-            
+
             // CRITICAL: Validate that trials are actually relevant to patient
             const relevantTrials = this.validateTrialRelevance(uniqueTrials, patient);
             console.log(`Relevant trials after validation: ${relevantTrials.length}`);
-            
+
             if (relevantTrials.length === 0) {
                 throw new Error('No clinical trials found matching patient criteria');
             }
-            
+
             return relevantTrials;
 
         } catch (error) {
@@ -1305,12 +1307,12 @@ class RealTimeDataAgent {
     // FIXED: Build only patient-specific search terms
     buildPatientSpecificSearchTerms(patient) {
         const searchTerms = [];
-        
+
         // Add primary diagnosis
         if (patient.primaryDiagnosis && patient.primaryDiagnosis.trim()) {
             const diagnosis = patient.primaryDiagnosis.trim();
             searchTerms.push(diagnosis);
-            
+
             // Add variations of the diagnosis
             const words = diagnosis.toLowerCase().split(/\s+/);
             if (words.length > 1) {
@@ -1322,7 +1324,7 @@ class RealTimeDataAgent {
                 });
             }
         }
-        
+
         // Add secondary conditions
         if (patient.conditions && patient.conditions.length > 0) {
             patient.conditions.forEach(condition => {
@@ -1331,11 +1333,11 @@ class RealTimeDataAgent {
                 }
             });
         }
-        
+
         // Remove duplicates and limit to most specific terms
         return [...new Set(searchTerms)].slice(0, 5);
     }
-    
+
     // Helper to identify medical terms
     isMedicalTerm(word) {
         const medicalKeywords = [
@@ -1345,8 +1347,8 @@ class RealTimeDataAgent {
             'neurological', 'psychiatric', 'rheumatoid', 'arthritis',
             'infection', 'inflammatory', 'chronic', 'acute'
         ];
-        
-        return medicalKeywords.some(keyword => 
+
+        return medicalKeywords.some(keyword =>
             word.includes(keyword) || keyword.includes(word)
         );
     }
@@ -1358,13 +1360,13 @@ class RealTimeDataAgent {
             params.append('format', 'json');
             params.append('pageSize', '10');
             params.append('countTotal', 'true');
-            
+
             // CRITICAL: Use exact condition matching
             params.append('query.cond', searchTerm);
-            
+
             // Filter for recruiting studies only
             params.append('filter.overallStatus', 'RECRUITING,NOT_YET_RECRUITING');
-            
+
             // Add location filter if available
             if (patient.location && patient.location.trim()) {
                 const location = patient.location.trim();
@@ -1376,11 +1378,11 @@ class RealTimeDataAgent {
                     }
                 }
             }
-            
+
             console.log('API URL:', `${this.clinicalTrialsAPI}?${params.toString()}`);
-            
+
             const response = await fetch(`${this.clinicalTrialsAPI}?${params.toString()}`);
-            
+
             if (!response.ok) {
                 console.error('API request failed:', response.status, response.statusText);
                 throw new Error('Clinical trials database temporarily unavailable');
@@ -1388,7 +1390,7 @@ class RealTimeDataAgent {
 
             const data = await response.json();
             console.log('API response for', searchTerm, ':', data.studies?.length || 0, 'studies');
-            
+
             if (data.studies && data.studies.length > 0) {
                 return this.processTrialData(data.studies, searchTerm);
             } else {
@@ -1449,14 +1451,14 @@ class RealTimeDataAgent {
             patient.primaryDiagnosis?.toLowerCase() || '',
             ...patient.conditions.map(c => c.toLowerCase())
         ].filter(Boolean);
-        
+
         console.log('Patient conditions for validation:', patientConditions);
-        
+
         return trials.filter(trial => {
             const trialCondition = trial.condition.toLowerCase();
             const trialTitle = trial.title.toLowerCase();
             const searchTerm = trial.searchTermUsed?.toLowerCase() || '';
-            
+
             // Check if trial condition matches any patient condition
             const isRelevant = patientConditions.some(patientCondition => {
                 return (
@@ -1467,9 +1469,9 @@ class RealTimeDataAgent {
                     searchTerm.includes(patientCondition)
                 );
             });
-            
+
             console.log(`Trial "${trial.title}" - Condition: "${trialCondition}" - Relevant: ${isRelevant}`);
-            
+
             return isRelevant;
         });
     }
@@ -1533,11 +1535,11 @@ IMPORTANT: Only provide information from verified medical sources. Do not genera
             }
 
             const data = await response.json();
-            
+
             if (!data.choices || !data.choices[0] || !data.choices[0].message) {
                 throw new Error('Invalid API response format');
             }
-            
+
             return data.choices[0].message.content;
 
         } catch (error) {
@@ -1586,7 +1588,7 @@ Provide specific, evidence-based recommendations for clinical trial matching.`;
 
         try {
             const eligibilityAssessment = await this.callPerplexityAPI(prompt);
-            
+
             return {
                 eligibilityAssessment,
                 timestamp: new Date(),
@@ -1601,15 +1603,15 @@ Provide specific, evidence-based recommendations for clinical trial matching.`;
 
     async performTrialMatching(patient, realTimeData, clinicalAnalysis) {
         const trialData = realTimeData.clinicalTrials;
-        
+
         // FIXED: Properly handle when no trials are found
         if (!trialData || trialData.length === 0) {
             console.log('No trials available for matching');
             throw new Error('No clinical trials found matching patient criteria');
         }
-        
+
         console.log(`Performing trial matching for ${trialData.length} trials`);
-        
+
         const matchingPrompt = `Perform intelligent clinical trial matching and ranking based on verified data:
 
 PATIENT PROFILE:
@@ -1646,7 +1648,7 @@ For each trial, provide match score (0-100) with detailed medical reasoning and 
 
         try {
             const matchingAnalysis = await this.callPerplexityAPI(matchingPrompt);
-            
+
             // Calculate patient-specific match scores based on medical criteria
             const scoredTrials = trialData.map((trial, index) => ({
                 ...trial,
@@ -1673,72 +1675,72 @@ For each trial, provide match score (0-100) with detailed medical reasoning and 
     // FIXED: Enhanced match score calculation with condition-specific logic
     calculatePatientSpecificMatchScore(trial, patient, analysisText, index) {
         let score = 75; // Start with higher base score since these are pre-filtered relevant trials
-        
+
         // Primary diagnosis matching (most critical factor)
         if (patient.primaryDiagnosis && trial.condition) {
             const patientDiagnosis = patient.primaryDiagnosis.toLowerCase();
             const trialCondition = trial.condition.toLowerCase();
-            
+
             // Exact match gets highest score
             if (trialCondition.includes(patientDiagnosis) || patientDiagnosis.includes(trialCondition)) {
                 score += 20;
             }
-            
+
             // Check if search term used matches patient diagnosis
             if (trial.searchTermUsed && patientDiagnosis.includes(trial.searchTermUsed.toLowerCase())) {
                 score += 15;
             }
         }
-        
+
         // Secondary conditions matching
         if (patient.conditions.length > 0) {
-            const hasMatchingCondition = patient.conditions.some(condition => 
+            const hasMatchingCondition = patient.conditions.some(condition =>
                 trial.condition.toLowerCase().includes(condition.toLowerCase()) ||
                 condition.toLowerCase().includes(trial.condition.toLowerCase())
             );
             if (hasMatchingCondition) score += 15;
         }
-        
+
         // Age eligibility (critical safety factor)
         if (patient.age && trial.eligibility) {
             const eligibility = trial.eligibility.toLowerCase();
             if (patient.age >= 18 && eligibility.includes('adult')) score += 10;
             if (patient.age >= 65 && eligibility.includes('elderly')) score += 5;
             if (patient.age < 18 && eligibility.includes('pediatric')) score += 10;
-            
+
             // Age exclusions (safety)
             if (eligibility.includes('18 years') && patient.age < 18) score -= 30;
             if (eligibility.includes('under 65') && patient.age > 65) score -= 10;
         }
-        
+
         // Geographic accessibility
         if (patient.location && trial.locations.length > 0) {
             const patientLocation = patient.location.toLowerCase();
             const hasNearbyLocation = trial.locations.some(location => {
                 const trialLocation = location.toLowerCase();
                 return patientLocation.includes(trialLocation.split(',')[1]?.trim()) ||
-                       trialLocation.includes(patientLocation.split(',')[1]?.trim());
+                    trialLocation.includes(patientLocation.split(',')[1]?.trim());
             });
             if (hasNearbyLocation) score += 10;
         }
-        
+
         // Trial status (availability)
         if (trial.status === 'Recruiting') score += 10;
         else if (trial.status === 'Not yet recruiting') score += 5;
         else if (trial.status.toLowerCase().includes('not recruiting')) score -= 15;
-        
+
         // Phase appropriateness (medical considerations)
         if (trial.phase === 'Phase 3') score += 8; // More established
         else if (trial.phase === 'Phase 2') score += 5;
         else if (trial.phase === 'Phase 1') score += 2; // More experimental
-        
+
         // Small random factor to prevent identical scores
         score += Math.random() * 3;
-        
+
         // Ensure realistic score range
         return Math.min(Math.max(Math.round(score), 50), 100);
     }
-    
+
     // Medical condition similarity checking (same as before)
     checkMedicalConditionSimilarity(condition1, condition2) {
         const medicalGroupings = [
@@ -1753,13 +1755,13 @@ For each trial, provide match score (0-100) with detailed medical reasoning and 
             ['blood', 'hematologic', 'hemato'],
             ['immune', 'immunologic', 'autoimmune']
         ];
-        
+
         for (const group of medicalGroupings) {
             const cond1Match = group.some(term => condition1.includes(term));
             const cond2Match = group.some(term => condition2.includes(term));
             if (cond1Match && cond2Match) return true;
         }
-        
+
         return false;
     }
 
@@ -1794,11 +1796,11 @@ For each trial, provide match score (0-100) with detailed medical reasoning and 
             }
 
             const data = await response.json();
-            
+
             if (!data.choices || !data.choices[0] || !data.choices[0].message) {
                 throw new Error('Invalid API response format');
             }
-            
+
             return data.choices[0].message.content;
 
         } catch (error) {
@@ -2004,11 +2006,11 @@ MEDICAL SAFETY REQUIREMENTS:
             }
 
             const data = await response.json();
-            
+
             if (!data.choices || !data.choices[0] || !data.choices[0].message) {
                 throw new Error('Invalid API response format');
             }
-            
+
             return data.choices[0].message.content;
 
         } catch (error) {
@@ -2076,7 +2078,7 @@ class DataProcessingAgent {
             rawPatient.mrn, rawPatient.medical_record_number,
             rawPatient.patient_number, rawPatient.case_id
         ];
-        
+
         const id = possibleIds.find(id => id && id.toString().trim());
         return id ? id.toString().trim() : `PAT-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
     }
@@ -2085,14 +2087,14 @@ class DataProcessingAgent {
         if (rawPatient.name) return rawPatient.name.toString().trim();
         if (rawPatient.patient_name) return rawPatient.patient_name.toString().trim();
         if (rawPatient.full_name) return rawPatient.full_name.toString().trim();
-        
+
         const firstName = rawPatient.first_name || rawPatient.firstname || rawPatient.fname || '';
         const lastName = rawPatient.last_name || rawPatient.lastname || rawPatient.lname || '';
-        
+
         if (firstName || lastName) {
             return `${firstName} ${lastName}`.trim();
         }
-        
+
         return 'Unknown Patient';
     }
 
@@ -2101,7 +2103,7 @@ class DataProcessingAgent {
             rawPatient.age, rawPatient.patient_age, rawPatient.current_age,
             rawPatient.age_years, rawPatient.years_old
         ];
-        
+
         for (let ageValue of possibleAges) {
             if (ageValue !== undefined && ageValue !== null && ageValue !== '') {
                 const age = parseInt(ageValue.toString());
@@ -2110,19 +2112,19 @@ class DataProcessingAgent {
                 }
             }
         }
-        
+
         const possibleBirthDates = [
             rawPatient.birth_date, rawPatient.birthdate, rawPatient.dob,
             rawPatient.date_of_birth, rawPatient.birth_day
         ];
-        
+
         for (let birthDate of possibleBirthDates) {
             if (birthDate) {
                 const calculated = this.calculateAgeFromBirthDate(birthDate);
                 if (calculated) return calculated;
             }
         }
-        
+
         return null;
     }
 
@@ -2130,15 +2132,15 @@ class DataProcessingAgent {
         try {
             const birth = new Date(birthDate);
             if (isNaN(birth.getTime())) return null;
-            
+
             const today = new Date();
             let age = today.getFullYear() - birth.getFullYear();
             const monthDiff = today.getMonth() - birth.getMonth();
-            
+
             if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
                 age--;
             }
-            
+
             return age > 0 && age < 150 ? age : null;
         } catch {
             return null;
@@ -2150,7 +2152,7 @@ class DataProcessingAgent {
             rawPatient.gender, rawPatient.sex, rawPatient.patient_gender,
             rawPatient.patient_sex, rawPatient.gender_identity
         ];
-        
+
         for (let genderValue of possibleGenders) {
             if (genderValue) {
                 const normalized = genderValue.toString().toLowerCase().trim();
@@ -2159,7 +2161,7 @@ class DataProcessingAgent {
                 if (['non-binary', 'nonbinary', 'other', 'nb'].includes(normalized)) return 'Non-binary';
             }
         }
-        
+
         return '';
     }
 
@@ -2170,13 +2172,13 @@ class DataProcessingAgent {
             rawPatient.condition, rawPatient.primary_condition,
             rawPatient.chief_complaint, rawPatient.presenting_complaint
         ];
-        
+
         for (let diagnosis of possibleDiagnoses) {
             if (diagnosis && diagnosis.toString().trim()) {
                 return diagnosis.toString().trim();
             }
         }
-        
+
         return '';
     }
 
@@ -2186,9 +2188,9 @@ class DataProcessingAgent {
             rawPatient.comorbidities, rawPatient.medical_history,
             rawPatient.other_conditions, rawPatient.additional_diagnoses
         ];
-        
+
         const conditions = [];
-        
+
         for (let conditionField of possibleConditions) {
             if (conditionField) {
                 if (Array.isArray(conditionField)) {
@@ -2200,7 +2202,7 @@ class DataProcessingAgent {
                 }
             }
         }
-        
+
         return [...new Set(conditions)];
     }
 
@@ -2210,9 +2212,9 @@ class DataProcessingAgent {
             rawPatient.drugs, rawPatient.prescriptions,
             rawPatient.current_drugs, rawPatient.medication_list
         ];
-        
+
         const medications = [];
-        
+
         for (let medicationField of possibleMedications) {
             if (medicationField) {
                 if (Array.isArray(medicationField)) {
@@ -2224,7 +2226,7 @@ class DataProcessingAgent {
                 }
             }
         }
-        
+
         return [...new Set(medications)];
     }
 
@@ -2235,13 +2237,13 @@ class DataProcessingAgent {
             rawPatient.city, rawPatient.state, rawPatient.region,
             rawPatient.patient_location, rawPatient.residence
         ];
-        
+
         for (let locationField of possibleLocations) {
             if (locationField && locationField.toString().trim()) {
                 return locationField.toString().trim();
             }
         }
-        
+
         return '';
     }
 
@@ -2251,26 +2253,26 @@ class DataProcessingAgent {
             rawPatient.health_insurance, rawPatient.payer,
             rawPatient.insurance_company, rawPatient.coverage
         ];
-        
+
         for (let insuranceField of possibleInsurance) {
             if (insuranceField && insuranceField.toString().trim()) {
                 return insuranceField.toString().trim();
             }
         }
-        
+
         return '';
     }
 
     calculateEligibilityScore(patient) {
         let score = 0;
-        
+
         if (patient.age && patient.age > 0) score += 20;
         if (patient.primaryDiagnosis) score += 30;
         if (patient.location) score += 15;
         if (patient.gender) score += 10;
         if (patient.conditions.length > 0) score += 15;
         if (patient.medications.length > 0) score += 10;
-        
+
         return Math.min(score, 100);
     }
 
@@ -2298,13 +2300,13 @@ class LocationAgent {
             if (/^\d{5}(-\d{4})?$/.test(locationString.trim())) {
                 return await this.enrichZipCode(locationString.trim());
             }
-            
+
             if (locationString.includes(',')) {
                 return locationString.trim();
             }
-            
+
             return locationString.trim();
-            
+
         } catch (error) {
             console.error('Location enrichment failed:', error);
             return locationString;
@@ -2319,3 +2321,14 @@ class LocationAgent {
 // Initialize the application
 const app = new ClinicalResearchApp();
 
+(function boot() {
+    const start = () => {
+        window.app = new ClinicalResearchApp();
+        console.log("[CRP] ClinicalResearchApp started:", window.app);
+    };
+    if (document.readyState === "loading") {
+        window.addEventListener("DOMContentLoaded", start);
+    } else {
+        start();
+    }
+})();
