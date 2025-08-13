@@ -1,42 +1,20 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>research-accelerate-ai</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+    <title>Clinical Research Intelligence Platform</title>
   </head>
-
-  <body>
-    <!-- Legacy host (for app.js). Put it OUTSIDE the React root -->
-    <button id="stakeholder-selector">Choose stakeholder</button>
-    <div id="stakeholder-modal" class="hidden">
-      <button id="close-modal">Close</button>
-      <button id="get-started-btn">Get started</button>
-      <div class="stakeholder-card" data-stakeholder="physician"></div>
-      <div class="stakeholder-card" data-stakeholder="pharma"></div>
-      <div class="stakeholder-card" data-stakeholder="cro"></div>
-    </div>
-
-    <div id="current-stakeholder"></div>
-    <div id="welcome-section"></div>
-    <div id="physician-dashboard" class="dashboard-section hidden"></div>
-    <div id="pharma-dashboard" class="dashboard-section hidden"></div>
-    <div id="cro-dashboard" class="dashboard-section hidden"></div>
-
-    <div id="patient-analysis-section" style="display:none">
-      <div id="patient-list"></div>
-    </div>
-
-    <section id="trial-analysis-section" class="hidden">
-      <div id="selected-patient-summary"></div>
-      <div id="ai-analysis-results"></div>
-    </section>
-
-    <!-- React app (unchanged) -->
+  <body class="bg-background">
     <div id="root"></div>
+
+    <!-- Vite/React entry -->
     <script type="module" src="/src/main.tsx"></script>
 
-    <!-- Legacy script (in /public/app.js) -->
+    <!-- ✅ Load the legacy DOM controller that powers the Physician portal -->
     <script src="/app.js" defer></script>
   </body>
 </html>
