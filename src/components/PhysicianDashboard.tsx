@@ -12,7 +12,7 @@ import {
 
 import {
   AnalysisEngine, ClinicalTrialsClient, ContentGenerator, Patient, PerplexityClient, Trial
-} from '@/lib/aiagents';
+} from '@/lib/aiAgents';
 
 // ====== CONFIG: choose one ======
 // A) Dev (key exposed in browser): keep apiUrl direct & set window.__CRP_PPLX_KEY somewhere (or Vite env to window)
