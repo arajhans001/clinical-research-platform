@@ -11,11 +11,20 @@ import {
 } from 'lucide-react';
 
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+} from './ui/select';
+
+import ReactMarkdown from 'react-markdown';
+
+import {
   AnalysisEngine, ClinicalTrialsClient, ContentGenerator, Patient, PerplexityClient, Trial
 } from '@/lib/aiAgents';
 
-const DEV_DIRECT = false; // temporary local only
-const PPLX_API_URL = '/api/perplexity';
+// ====== CONFIG for Vercel (secure proxy) ======
+const DEV_DIRECT = false;
+const PPLX_API_URL = DEV_DIRECT
+  ? 'https://api.perplexity.ai/chat/completions'
+  : '/api/perplexity';
 
 const pplxClient = new PerplexityClient({
   apiUrl: PPLX_API_URL,
@@ -96,8 +105,15 @@ export const PhysicianDashboard = () => {
   const [analysisText, setAnalysisText] = useState<string>('');
   const [matches, setMatches] = useState<Trial[]>([]);
   const [matchReason, setMatchReason] = useState<string>('');
+
   const [referralPreview, setReferralPreview] = useState<string>('');
   const [referralFor, setReferralFor] = useState<{patient?: Patient; trial?: Trial} | null>(null);
+
+  // After Visit Summary (AVS) state
+  const [avsMarkdown, setAvsMarkdown] = useState<string>('');
+  const [avsLang, setAvsLang] = useState<'en' | 'es' | 'zh' | 'hi'>('en');
+  const [avsIncludeNct, setAvsIncludeNct] = useState<'yes' | 'no'>('no');
+  const [generatingAvs, setGeneratingAvs] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -142,6 +158,7 @@ export const PhysicianDashboard = () => {
     setMatchReason('');
     setReferralPreview('');
     setReferralFor(null);
+    setAvsMarkdown('');
 
     try {
       const { analysis, matches } = await engine.run(p);
@@ -179,6 +196,63 @@ export const PhysicianDashboard = () => {
       setReferralPreview(letter);
     } catch (e) {
       setReferralPreview('Unable to generate referral letter in this environment.');
+    }
+  };
+
+  const generateAVS = async () => {
+    if (!selected) return;
+    setGeneratingAvs(true);
+    setAvsMarkdown('Generating After Visit Summary…');
+
+    const best = avsIncludeNct === 'yes' && matches.length ? matches[0] : null;
+
+    const langLabel =
+      avsLang === 'es' ? 'Spanish' :
+      avsLang === 'zh' ? 'Chinese (Simplified)' :
+      avsLang === 'hi' ? 'Hindi' : 'English';
+
+    const trialLine = best
+      ? `Include a short plain-language note about a potentially relevant clinical trial: **${best.title}** (NCT: ${best.nctId}). Make it clear this is optional and patients should discuss with their doctor.`
+      : `Do not mention any specific clinical trial unless clinically necessary.`;
+
+    const prompt = `Create a **patient-friendly After Visit Summary (AVS)** for the following patient, written in clear language (about 8th-grade reading level). Use Markdown with headings, bullet lists, and short sentences.
+
+PATIENT:
+- Name: ${selected.name}
+- Age: ${selected.age ?? 'Unknown'}
+- Gender: ${selected.gender || 'Unknown'}
+- Primary Diagnosis: ${selected.primaryDiagnosis || 'Not specified'}
+- Co-morbidities: ${selected.conditions.join(', ') || 'None'}
+- Current Medications: ${selected.medications.join(', ') || 'None'}
+- Location: ${selected.location || 'Unknown'}
+
+CLINICAL CONTEXT (from provider analysis):
+${analysisText || '(No additional analysis text provided.)'}
+
+REQUIREMENTS:
+1. Sections in this order:
+   - **Visit Summary**
+   - **Your Diagnosis / Condition**
+   - **What We Discussed Today**
+   - **Medications**
+   - **Tests & Follow-ups**
+   - **Lifestyle & Safety Tips**
+   - **When to Seek Urgent Care**
+   - **Resources & Next Steps**
+2. Use short bullet points and bold key words.
+3. ${trialLine}
+4. Include a short, plain disclaimer that the AVS is informational and patients should follow their clinician’s guidance.
+5. **Write the final AVS in ${langLabel}.**
+
+Output only the Markdown for the AVS.`;
+
+    try {
+      const md = await pplxClient.chat(prompt, 1400, 0.5);
+      setAvsMarkdown(md);
+    } catch (e: any) {
+      setAvsMarkdown(`Unable to generate the After Visit Summary.\n\nError: ${String(e?.message || e)}`);
+    } finally {
+      setGeneratingAvs(false);
     }
   };
 
@@ -480,7 +554,7 @@ export const PhysicianDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Clinical Analysis Summary */}
+            {/* Clinical Analysis Summary (Markdown) */}
             {analysisText && (
               <Card>
                 <CardHeader>
@@ -488,8 +562,8 @@ export const PhysicianDashboard = () => {
                   <CardDescription>Evidence-based eligibility & considerations</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="prose prose-sm max-w-none whitespace-pre-wrap">
-                    {analysisText}
+                  <div className="prose prose-sm max-w-none">
+                    <ReactMarkdown>{analysisText}</ReactMarkdown>
                   </div>
                 </CardContent>
               </Card>
@@ -516,7 +590,7 @@ export const PhysicianDashboard = () => {
                           <div className="space-y-1">
                             <div className="flex items-center gap-3">
                               <span className="text-sm font-semibold">#{idx + 1}</span>
-                              <span className="text-xs rounded-full px-2 py-0.5 bg-primary text-primary-foreground">
+                              <span className="text-[11px] rounded-full px-2 py-0.5 bg-primary text-primary-foreground">
                                 {t.matchScore}% Match
                               </span>
                               <span className="text-[11px] text-muted-foreground">Phase {t.phase} · {t.status}</span>
@@ -552,13 +626,15 @@ export const PhysicianDashboard = () => {
                 {matchReason && (
                   <div className="mt-6">
                     <div className="text-sm font-medium mb-2">AI Matching Notes</div>
-                    <div className="text-sm text-muted-foreground whitespace-pre-wrap">{matchReason}</div>
+                    <div className="text-sm text-muted-foreground prose prose-sm max-w-none">
+                      <ReactMarkdown>{matchReason}</ReactMarkdown>
+                    </div>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Referral Preview */}
+            {/* Referral Preview (Markdown) */}
             {referralFor?.trial && (
               <Card>
                 <CardHeader>
@@ -572,15 +648,19 @@ export const PhysicianDashboard = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="rounded-md border bg-muted/40 p-3 max-h-[320px] overflow-auto whitespace-pre-wrap text-sm">
-                    {referralPreview || 'Generating…'}
+                  <div className="rounded-md border bg-muted/40 p-3 max-h-[320px] overflow-auto prose prose-sm max-w-none">
+                    <ReactMarkdown>{referralPreview || 'Generating…'}</ReactMarkdown>
                   </div>
                   <div className="mt-3 flex items-center gap-2">
                     <Button variant="outline" onClick={() => copyText(referralPreview)} disabled={!referralPreview}>
                       <Clipboard className="w-4 h-4 mr-2" />
                       Copy
                     </Button>
-                    <Button variant="outline" onClick={() => downloadText(referralPreview, `referral-${(selected?.name || 'patient').replace(/\s+/g,'_')}-${referralFor.trial?.nctId}.txt`)} disabled={!referralPreview}>
+                    <Button
+                      variant="outline"
+                      onClick={() => downloadText(referralPreview, `referral-${(selected?.name || 'patient').replace(/\s+/g,'_')}-${referralFor.trial?.nctId}.md`)}
+                      disabled={!referralPreview}
+                    >
                       <Download className="w-4 h-4 mr-2" />
                       Download
                     </Button>
@@ -588,6 +668,67 @@ export const PhysicianDashboard = () => {
                 </CardContent>
               </Card>
             )}
+
+            {/* After Visit Summary (Markdown) */}
+            <Card>
+              <CardHeader>
+                <CardTitle>After Visit Summary (Patient-Friendly)</CardTitle>
+                <CardDescription>Generate a plain-language summary for the patient (Markdown).</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="text-sm font-medium">Language</div>
+                  <Select value={avsLang} onValueChange={(v) => setAvsLang(v as 'en' | 'es' | 'zh' | 'hi')}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Select language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="es">Spanish</SelectItem>
+                      <SelectItem value="zh">Chinese</SelectItem>
+                      <SelectItem value="hi">Hindi</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <div className="text-sm font-medium ml-2">Include top trial (NCT)</div>
+                  <Select value={avsIncludeNct} onValueChange={(v) => setAvsIncludeNct(v as 'yes' | 'no')}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Include trial?" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="yes" disabled={!matches.length}>
+                        Yes {matches.length ? '' : '(no matches)'}
+                      </SelectItem>
+                      <SelectItem value="no">No</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Button onClick={generateAVS} disabled={generatingAvs}>
+                    <FileText className="w-4 h-4 mr-2" />
+                    {generatingAvs ? 'Generating…' : 'Generate AVS'}
+                  </Button>
+                </div>
+
+                <div className="rounded-md border bg-muted/40 p-3 max-h-[420px] overflow-auto prose prose-sm max-w-none">
+                  {avsMarkdown ? <ReactMarkdown>{avsMarkdown}</ReactMarkdown> : <span className="text-sm text-muted-foreground">No AVS yet.</span>}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" onClick={() => copyText(avsMarkdown)} disabled={!avsMarkdown}>
+                    <Clipboard className="w-4 h-4 mr-2" />
+                    Copy AVS
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => downloadText(avsMarkdown, `avs-${(selected?.name || 'patient').replace(/\s+/g,'_')}.md`)}
+                    disabled={!avsMarkdown}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download AVS
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
       </div>
