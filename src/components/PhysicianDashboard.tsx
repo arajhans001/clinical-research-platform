@@ -14,13 +14,8 @@ import {
   AnalysisEngine, ClinicalTrialsClient, ContentGenerator, Patient, PerplexityClient, Trial
 } from '@/lib/aiAgents';
 
-// ====== CONFIG: choose one ======
-// A) Dev (key exposed in browser): keep apiUrl direct & set window.__CRP_PPLX_KEY somewhere (or Vite env to window)
-const DEV_DIRECT = false;
-// B) Prod (secure proxy): set apiUrl to /api/pplx and do NOT expose key on client
-const PPLX_API_URL = DEV_DIRECT
-  ? 'https://api.perplexity.ai/chat/completions'
-  : '/api/pplx';
+const DEV_DIRECT = false; // temporary local only
+const PPLX_API_URL = '/api/perplexity';
 
 const pplxClient = new PerplexityClient({
   apiUrl: PPLX_API_URL,
