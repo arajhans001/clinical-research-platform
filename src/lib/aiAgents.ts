@@ -153,23 +153,50 @@ export class ClinicalTrialsClient {
     params.append('countTotal', 'true');
     params.append('query.cond', term);
     params.append('filter.overallStatus', 'RECRUITING,NOT_YET_RECRUITING');
-
-    // Optional coarse geo filter based on "City, ST" or "ST"
-    if (patient.location && patient.location.includes(',')) {
-      const parts = patient.location.split(',');
-      const state = parts[parts.length - 1].trim();
-      if (/^[A-Z]{2}$/i.test(state)) {
-        params.append('filter.geo', `distance(50,${state})`);
-      }
-    }
-
+  
     const url = `${CLINICAL_API}?${params.toString()}`;
     const r = await fetch(url);
-    if (!r.ok) throw new Error('Clinical trials database temporarily unavailable');
+  
+    // If API returns 400 due to bad filters, retry without the status filter as a fallback
+    if (!r.ok) {
+      if (r.status === 400) {
+        const paramsRetry = new URLSearchParams();
+        paramsRetry.append('format', 'json');
+        paramsRetry.append('pageSize', '15');
+        paramsRetry.append('countTotal', 'true');
+        paramsRetry.append('query.cond', term);
+        const r2 = await fetch(`${CLINICAL_API}?${paramsRetry.toString()}`);
+        if (!r2.ok) throw new Error('Clinical trials request failed (400) and fallback also failed');
+        const data2 = await r2.json();
+        const trials2 = this.toTrials(data2?.studies || [], term);
+        return this.postFilterByState(trials2, patient);
+      }
+      throw new Error('Clinical trials database temporarily unavailable');
+    }
+  
     const data = await r.json();
-
-    const studies = data?.studies || [];
-    return this.toTrials(studies, term);
+    const trials = this.toTrials(data?.studies || [], term);
+    return this.postFilterByState(trials, patient);
+  }
+  
+  // Light post-filter so we still bias to nearby sites without breaking the API
+  private postFilterByState(trials: Trial[], patient: Patient): Trial[] {
+    const loc = (patient.location || '').trim();
+    if (!loc) return trials;
+  
+    // Try to extract a 2-letter state (e.g., "Seattle, WA" → "WA" or "WA")
+    const parts = loc.split(',').map(s => s.trim()).filter(Boolean);
+    const maybeState = parts.length ? parts[parts.length - 1] : '';
+    const state2 = /^[A-Z]{2}$/i.test(maybeState) ? maybeState.toUpperCase() : '';
+  
+    if (!state2) return trials;
+  
+    const filtered = trials.filter(t =>
+      (t.locations || []).some(L => L.toUpperCase().includes(state2))
+    );
+  
+    // If filtering removes everything, fall back to original trials
+    return filtered.length ? filtered : trials;
   }
 
   private toTrials(studies: any[], term: string): Trial[] {
