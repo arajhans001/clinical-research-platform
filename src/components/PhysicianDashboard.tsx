@@ -1,5 +1,4 @@
 // src/components/PhysicianDashboard.tsx
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMemo, useRef, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -35,28 +34,6 @@ const pplxClient = new PerplexityClient({
 const trialsClient = new ClinicalTrialsClient();
 const engine = new AnalysisEngine(pplxClient, trialsClient);
 const contentGen = new ContentGenerator(pplxClient);
-
-// ---------- Markdown components (clean, professional) ----------
-const mdComponents: any = {
-  h1: ({ children }: any) => <h1 className="text-xl font-bold mt-2 mb-2">{children}</h1>,
-  h2: ({ children }: any) => <h2 className="text-lg font-semibold mt-2 mb-1">{children}</h2>,
-  h3: ({ children }: any) => <h3 className="text-base font-semibold mt-2 mb-1">{children}</h3>,
-  p: ({ children }: any) => <p className="leading-relaxed mb-2">{children}</p>,
-  ul: ({ children }: any) => <ul className="list-disc pl-6 space-y-1 mb-2">{children}</ul>,
-  ol: ({ children }: any) => <ol className="list-decimal pl-6 space-y-1 mb-2">{children}</ol>,
-  li: ({ children }: any) => <li className="leading-relaxed">{children}</li>,
-  blockquote: ({ children }: any) => (
-    <blockquote className="border-l-4 pl-3 italic text-muted-foreground my-2">{children}</blockquote>
-  ),
-  code: ({ inline, className, children, ...props }: any) =>
-    inline ? (
-      <code className="rounded bg-muted px-1.5 py-0.5 text-[13px]" {...props}>{children}</code>
-    ) : (
-      <pre className="rounded-md bg-muted p-3 text-[13px] overflow-x-auto" {...props}>
-        <code>{children}</code>
-      </pre>
-    ),
-};
 
 // ---------- Helpers for CSV + Epic-like fields ----------
 function parseCSV(text: string): Record<string, string>[] {
@@ -118,15 +95,15 @@ function toPatient(rec: Record<string, string>): Patient {
 
 // ---------- Patient metrics (Epic-like) ----------
 type PatientMetrics = {
-  severity?: number;          // 0..1
+  severity?: number;
   diseaseStage?: string;
-  ecog?: number;              // 0..5
-  nyha?: number;              // 1..4
-  hba1c?: number;             // %
-  egfr?: number;              // mL/min/1.73m2
+  ecog?: number;
+  nyha?: number;
+  hba1c?: number;
+  egfr?: number;
   bmi?: number;
-  smoking?: string;           // current, former, never
-  adherence?: number;         // 0..1
+  smoking?: string;
+  adherence?: number;
   tests?: Record<string, number>;
 };
 
@@ -172,22 +149,19 @@ function extractMetrics(rec: Record<string,string>): PatientMetrics {
   };
 }
 
-// ---------- Heuristic scoring (informational only) ----------
+// ---------- Heuristic eligibility (fallback) ----------
 type FitResult = { score: number; reasons: string[]; band: 'Low'|'Moderate'|'High' };
 
 function eligibilityFrom(p: Patient, m?: PatientMetrics): FitResult {
   let score = 50;
   const reasons: string[] = [];
 
-  // Age
   if (typeof p.age === 'number') {
     if (p.age < 18) { score -= 15; reasons.push('Minor age'); }
     else if (p.age <= 75) { score += 8; reasons.push('Adult age range'); }
     else if (p.age <= 85) { score -= 5; reasons.push('Older adult'); }
     else { score -= 10; reasons.push('Very advanced age'); }
   }
-
-  // Severity / stage
   if (m?.severity !== undefined) {
     if (m.severity < 0.4) { score += 8; reasons.push('Mild severity'); }
     else if (m.severity < 0.7) { score += 2; reasons.push('Moderate severity'); }
@@ -198,8 +172,6 @@ function eligibilityFrom(p: Patient, m?: PatientMetrics): FitResult {
     if (/(^| )I( |$)/.test(s) || /II/.test(s)) { score += 5; reasons.push(`Earlier stage (${m.diseaseStage})`); }
     else if (/IV/.test(s)) { score -= 10; reasons.push(`Advanced stage (${m.diseaseStage})`); }
   }
-
-  // Performance (ECOG / NYHA)
   if (typeof m?.ecog === 'number') {
     if (m.ecog <= 1) { score += 10; reasons.push('ECOG 0–1'); }
     else if (m.ecog === 2) { score += 5; reasons.push('ECOG 2'); }
@@ -210,8 +182,6 @@ function eligibilityFrom(p: Patient, m?: PatientMetrics): FitResult {
     else if (m.nyha === 3) { score -= 5; reasons.push('NYHA III'); }
     else { score -= 10; reasons.push('NYHA IV'); }
   }
-
-  // Labs (very coarse)
   if (typeof m?.hba1c === 'number') {
     if (m.hba1c >= 6 && m.hba1c <= 9) { score += 3; reasons.push('HbA1c in targetable range'); }
     else if (m.hba1c > 9) { score -= 3; reasons.push('HbA1c high'); }
@@ -225,14 +195,10 @@ function eligibilityFrom(p: Patient, m?: PatientMetrics): FitResult {
     if (m.bmi >= 18.5 && m.bmi <= 35) { score += 2; reasons.push('BMI 18.5–35'); }
     else if (m.bmi < 18.5 || m.bmi >= 40) { score -= 3; reasons.push('BMI outside common ranges'); }
   }
-
-  // Co-morbidities + meds complexity
   if (p.conditions.length >= 4) { score -= 8; reasons.push('Multiple co-morbidities'); }
   else if (p.conditions.length >= 1) { score -= 2; reasons.push('Some co-morbidities'); }
   if (p.medications.length >= 8) { score -= 4; reasons.push('High medication burden'); }
-
-  // Adherence (if present)
-  if (typeof (m?.adherence) === 'number') {
+  if (typeof m?.adherence === 'number') {
     if (m.adherence >= 0.8) { score += 4; reasons.push('Good adherence'); }
     else if (m.adherence < 0.5) { score -= 4; reasons.push('Low adherence'); }
   }
@@ -242,112 +208,145 @@ function eligibilityFrom(p: Patient, m?: PatientMetrics): FitResult {
   return { score, reasons, band };
 }
 
-function participationFrom(p: Patient, m?: PatientMetrics): FitResult {
-  let score = 60;
-  const reasons: string[] = [];
-
-  // Logistics proxy: location presence
-  if (p.location) { score += 4; reasons.push('Location on file'); }
-  else { score -= 3; reasons.push('Location not specified'); }
-
-  // Age extremes may reduce willingness
-  if (typeof p.age === 'number') {
-    if (p.age < 18 || p.age > 80) { score -= 6; reasons.push('Age may limit willingness'); }
-  }
-
-  // Medication & condition burden
-  if (p.medications.length >= 8) { score -= 5; reasons.push('High medication burden'); }
-  if (p.conditions.length >= 5) { score -= 4; reasons.push('Multiple conditions'); }
-
-  // Performance / adherence
+// Simple participation heuristic (fallback)
+function participationHeuristic(m?: PatientMetrics, p?: Patient) {
+  let s = 60;
   if (typeof m?.ecog === 'number') {
-    if (m.ecog <= 1) { score += 6; reasons.push('Good performance status'); }
-    else if (m.ecog >= 3) { score -= 8; reasons.push('Poor performance status'); }
+    if (m.ecog <= 1) s += 10;
+    else if (m.ecog >= 3) s -= 10;
   }
   if (typeof m?.adherence === 'number') {
-    if (m.adherence >= 0.8) { score += 5; reasons.push('Good medication adherence'); }
-    else if (m.adherence < 0.5) { score -= 6; reasons.push('Low adherence'); }
+    if (m.adherence >= 0.8) s += 8;
+    else if (m.adherence < 0.5) s -= 8;
   }
-
-  score = Math.max(0, Math.min(100, Math.round(score)));
-  const band = score >= 70 ? 'High' : score >= 45 ? 'Moderate' : 'Low';
-  return { score, reasons, band };
+  if ((p?.conditions?.length || 0) >= 4) s -= 5;
+  return Math.max(0, Math.min(100, Math.round(s)));
 }
 
-// ---------- Gauge component (animated semi-circle) ----------
-function EligibilityGauge({ value, label }: { value: number; label?: string }) {
-  const clamped = Math.max(0, Math.min(100, value));
-  const radius = 90;
-  const stroke = 12;
-  const cx = 100, cy = 110; // center for semi-circle
-  const startAngle = 180;
-  const endAngle = 0;
-
-  const polar = (cx: number, cy: number, r: number, angle: number) => {
-    const a = (angle - 90) * Math.PI / 180.0;
-    return { x: cx + (r * Math.cos(a)), y: cy + (r * Math.sin(a)) };
+// ---------- AI score parsing ----------
+function parseAiScores(md: string): { fit?: number; likelihood?: number } {
+  if (!md) return {};
+  const fitM = md.match(/FIT\s*=\s*(\d{1,3})/i);
+  const likM = md.match(/LIKELIHOOD\s*=\s*(\d{1,3})/i);
+  const clamp = (n?: number) => (typeof n === 'number' ? Math.max(0, Math.min(100, n)) : undefined);
+  return {
+    fit: clamp(fitM ? parseInt(fitM[1], 10) : undefined),
+    likelihood: clamp(likM ? parseInt(likM[1], 10) : undefined),
   };
+}
 
-  const describeArc = (startDeg: number, endDeg: number) => {
-    const start = polar(cx, cy, radius, endDeg);
-    const end = polar(cx, cy, radius, startDeg);
-    const largeArc = endDeg - startDeg <= -180 ? 1 : 0;
-    return `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 0 ${end.x} ${end.y}`;
-  };
+// ---------- Fancy semi-circle gauge ----------
+function FancyGauge({
+  value,
+  label,
+  footnote,
+  id,
+}: {
+  value: number;
+  label: string;
+  footnote?: string;
+  id: string; // for unique gradient ids
+}) {
+  const v = Math.max(0, Math.min(100, Math.round(value)));
+  const radius = 120;
+  const stroke = 16;
+  const cx = 140, cy = 150;
 
-  const trackPath = describeArc(startAngle, endAngle);
-  const valueAngle = startAngle - (180 * (clamped / 100));
-  const valuePath = describeArc(startAngle, valueAngle);
+  // Semi-arc path (180°)
+  const startAngle = Math.PI;   // 180°
+  const endAngle = 0;           // 0°
+  const arc = (angle: number) => ({
+    x: cx + radius * Math.cos(angle),
+    y: cy + radius * Math.sin(angle),
+  });
+  const p0 = arc(startAngle);
+  const p1 = arc(endAngle);
+  const pathD = `M ${p0.x} ${p0.y} A ${radius} ${radius} 0 0 1 ${p1.x} ${p1.y}`;
 
-  const needleLen = radius - 16;
-  const needleAngle = 180 - (180 * (clamped / 100));
-  const needleRad = (needleAngle - 90) * Math.PI / 180;
-  const nx = cx + needleLen * Math.cos(needleRad);
-  const ny = cy + needleLen * Math.sin(needleRad);
+  // Use pathLength=100 to animate by percentage
+  const dash = 100;
+  const dashOffset = dash - v;
 
-  const color =
-    clamped >= 70 ? 'stroke-green-600' :
-    clamped >= 45 ? 'stroke-amber-600' :
-    'stroke-red-600';
+  // Needle
+  const angle = Math.PI - (Math.PI * v) / 100; // map 0..100 to 180..0 deg
+  const needleLen = radius - 26;
+  const nx = cx + needleLen * Math.cos(angle);
+  const ny = cy + needleLen * Math.sin(angle);
 
   return (
     <div className="w-full">
-      <svg viewBox="0 0 200 120" className="w-full">
+      <svg viewBox="0 0 280 180" className="w-full">
+        <defs>
+          <linearGradient id={`g-${id}`} x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#ef4444" />   {/* red */}
+            <stop offset="50%" stopColor="#f59e0b" />  {/* amber */}
+            <stop offset="100%" stopColor="#16a34a" /> {/* green */}
+          </linearGradient>
+          <filter id={`shadow-${id}`} x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="1.5" stdDeviation="1.5" floodOpacity="0.3" />
+          </filter>
+        </defs>
+
         {/* Track */}
-        <path d={trackPath} className="stroke-muted-foreground/20" strokeWidth={stroke} fill="none" strokeLinecap="round" />
-        {/* Value arc */}
         <path
-          d={valuePath}
-          className={`${color}`}
+          d={pathD}
+          pathLength={100}
+          className="stroke-muted-foreground/20"
           strokeWidth={stroke}
           fill="none"
           strokeLinecap="round"
-          style={{ transition: 'd 0.6s ease' }}
+        />
+        {/* Value */}
+        <path
+          d={pathD}
+          pathLength={100}
+          stroke="url(#g-${id})"
+          strokeWidth={stroke}
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={dash}
+          strokeDashoffset={dashOffset}
+          style={{ transition: 'stroke-dashoffset 700ms ease' }}
+          filter={`url(#shadow-${id})`}
         />
         {/* Needle */}
         <line
-          x1={100} y1={110}
-          x2={nx} y2={ny}
+          x1={cx}
+          y1={cy}
+          x2={nx}
+          y2={ny}
           className="stroke-foreground"
           strokeWidth={2}
-          style={{ transition: 'x2 0.6s ease, y2 0.6s ease' }}
+          style={{ transition: 'x2 600ms ease, y2 600ms ease' }}
         />
-        <circle cx={100} cy={110} r={3} className="fill-foreground" />
+        <circle cx={cx} cy={cy} r={4} className="fill-foreground" />
+        {/* Ticks */}
+        {Array.from({ length: 11 }).map((_, i) => {
+          const tAng = Math.PI - (Math.PI * i) / 10;
+          const r1 = radius + 2;
+          const r2 = radius - 10;
+          const x1 = cx + r1 * Math.cos(tAng);
+          const y1 = cy + r1 * Math.sin(tAng);
+          const x2 = cx + r2 * Math.cos(tAng);
+          const y2 = cy + r2 * Math.sin(tAng);
+          return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} className="stroke-muted-foreground/30" strokeWidth={1} />;
+        })}
+
         {/* Labels */}
-        <text x="100" y="100" textAnchor="middle" className="fill-foreground text-[12px]">{label || 'Trial Fit'}</text>
-        <text x="100" y="118" textAnchor="middle" className="fill-foreground font-semibold text-[14px]">{clamped}%</text>
+        <text x={cx} y={cy - 8} textAnchor="middle" className="fill-foreground text-[14px] font-medium">
+          {label}
+        </text>
+        <text x={cx} y={cy + 22} textAnchor="middle" className="fill-foreground text-[26px] font-bold">
+          {v}%
+        </text>
       </svg>
+      {footnote && (
+        <div className="mt-1 text-xs text-muted-foreground text-center">
+          {footnote}
+        </div>
+      )}
     </div>
   );
-}
-
-// Extract "FIT=..; LIKELIHOOD=.." from AI analysis
-function extractScoresFromText(md: string): { fit: number | null; like: number | null } {
-  const m = md.match(/FIT\s*=\s*(\d{1,3})\s*;\s*LIKELIHOOD\s*=\s*(\d{1,3})/i);
-  if (!m) return { fit: null, like: null };
-  const fit = Math.min(100, Math.max(0, parseInt(m[1], 10)));
-  const like = Math.min(100, Math.max(0, parseInt(m[2], 10)));
-  return { fit: isFinite(fit) ? fit : null, like: isFinite(like) ? like : null };
 }
 
 // ====== Component ======
@@ -373,10 +372,6 @@ export const PhysicianDashboard = () => {
   const [avsIncludeNct, setAvsIncludeNct] = useState<'yes' | 'no'>('no');
   const [generatingAvs, setGeneratingAvs] = useState<boolean>(false);
 
-  // AI-parsed meters (fallback to heuristics)
-  const [aiFit, setAiFit] = useState<number | null>(null);
-  const [aiLikely, setAiLikely] = useState<number | null>(null);
-
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const steps = useMemo(() => ([
@@ -385,15 +380,16 @@ export const PhysicianDashboard = () => {
     { icon: FileText, title: 'Generate Referrals', desc: 'Automated letters and materials' }
   ]), []);
 
-  const fitHeur = useMemo(() => {
+  const fitHeuristic = useMemo(() => {
     if (!selected) return null;
     return eligibilityFrom(selected, patientMetrics[selected.id]);
   }, [selected, patientMetrics]);
 
-  const likeHeur = useMemo(() => {
-    if (!selected) return null;
-    return participationFrom(selected, patientMetrics[selected.id]);
-  }, [selected, patientMetrics]);
+  const aiScores = useMemo(() => parseAiScores(analysisText), [analysisText]);
+  const participationFallback = useMemo(
+    () => participationHeuristic(patientMetrics[selected?.id || ''], selected || undefined),
+    [patientMetrics, selected]
+  );
 
   // ====== Upload & parse (NO auto analysis) ======
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -436,8 +432,6 @@ export const PhysicianDashboard = () => {
     setReferralPreview('');
     setReferralFor(null);
     setAvsMarkdown('');
-    setAiFit(null);
-    setAiLikely(null);
 
     try {
       const { analysis, matches } = await engine.run(p, patientMetrics[p.id]);
@@ -446,11 +440,6 @@ export const PhysicianDashboard = () => {
       setMatchReason(matches.matchingAnalysis);
       setMatches(matches.trials);
       setProgressText('Analysis complete.');
-
-      // Try to parse AI-provided FIT/LIKELIHOOD
-      const { fit, like } = extractScoresFromText(analysis.eligibilityAssessment || '');
-      if (fit != null) setAiFit(fit);
-      if (like != null) setAiLikely(like);
     } catch (err: any) {
       console.error(err);
       const msg = String(err?.message || err);
@@ -523,7 +512,7 @@ REQUIREMENTS:
    - **Lifestyle & Safety Tips**
    - **When to Seek Urgent Care**
    - **Resources & Next Steps**
-2. Use short bullet points and **bold** key words.
+2. Use short bullet points and bold key words.
 3. ${trialLine}
 4. Include a short, plain disclaimer that the AVS is informational and patients should follow their clinician’s guidance.
 5. **Write the final AVS in ${langLabel}.**
@@ -560,6 +549,16 @@ Output only the Markdown for the AVS.`;
       alert('Download failed.');
     }
   };
+
+  // Values for gauges (prefer AI if present)
+  const trialFitValue = (aiScores.fit ?? fitHeuristic?.score ?? 0);
+  const participationValue = (aiScores.likelihood ?? participationFallback ?? 0);
+  const trialFitFoot = aiScores.fit !== undefined
+    ? `Parsed from analysis (FIT=${aiScores.fit}%)`
+    : 'Estimated from patient data';
+  const participationFoot = aiScores.likelihood !== undefined
+    ? `Parsed from analysis (LIKELIHOOD=${aiScores.likelihood}%)`
+    : 'Estimated from patient data';
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -841,7 +840,7 @@ Output only the Markdown for the AVS.`;
               </CardContent>
             </Card>
 
-            {/* Trial Fit & Participation Meters */}
+            {/* Patient Trial Fit & Participation (polished gauges) */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -852,41 +851,33 @@ Output only the Markdown for the AVS.`;
                   AI-derived scores when available (falls back to data-driven heuristics).
                 </CardDescription>
               </CardHeader>
-              <CardContent className="grid md:grid-cols-2 gap-6 items-center">
-                <div>
-                  <EligibilityGauge
-                    value={aiFit ?? (fitHeur?.score ?? 0)}
-                    label={aiFit != null ? `Trial Fit (AI)` : `Trial Fit (${fitHeur?.band || '—'})`}
+              <CardContent>
+                <div className="grid md:grid-cols-2 gap-10 items-start">
+                  <FancyGauge
+                    id="fit"
+                    value={trialFitValue}
+                    label="Trial Fit (AI)"
+                    footnote={trialFitFoot}
                   />
-                  {aiFit != null && (
-                    <div className="text-xs text-muted-foreground text-center mt-1">
-                      Parsed from analysis (FIT={aiFit}%)
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <EligibilityGauge
-                    value={aiLikely ?? (likeHeur?.score ?? 0)}
-                    label={aiLikely != null ? `Participation (AI)` : `Participation (${likeHeur?.band || '—'})`}
+                  <FancyGauge
+                    id="likelihood"
+                    value={participationValue}
+                    label="Participation (AI)"
+                    footnote={participationFoot}
                   />
-                  {aiLikely != null && (
-                    <div className="text-xs text-muted-foreground text-center mt-1">
-                      Parsed from analysis (LIKELIHOOD={aiLikely}%)
-                    </div>
-                  )}
                 </div>
 
-                <div className="md:col-span-2 space-y-2 text-sm">
-                  <div className="text-muted-foreground">Factors considered (eligibility):</div>
-                  <ul className="list-disc pl-5 space-y-1">
-                    {(fitHeur?.reasons || ['Insufficient data']).slice(0,6).map((r, i) => (
-                      <li key={i}>{r}</li>
-                    ))}
-                  </ul>
-                  <p className="text-[12px] text-muted-foreground mt-2">
-                    These meters are informational and do not replace medical judgment. Refer to official eligibility criteria on ClinicalTrials.gov.
-                  </p>
-                </div>
+                {fitHeuristic?.reasons?.length ? (
+                  <div className="mt-6">
+                    <div className="text-sm font-medium mb-2">Factors considered (eligibility):</div>
+                    <ul className="list-disc pl-5 space-y-1 text-sm">
+                      {fitHeuristic.reasons.slice(0,6).map((r, i) => <li key={i}>{r}</li>)}
+                    </ul>
+                    <p className="text-[12px] text-muted-foreground mt-3">
+                      These meters are informational and do not replace medical judgment. Refer to official eligibility criteria on ClinicalTrials.gov.
+                    </p>
+                  </div>
+                ) : null}
               </CardContent>
             </Card>
 
@@ -899,7 +890,7 @@ Output only the Markdown for the AVS.`;
                 </CardHeader>
                 <CardContent>
                   <div className="prose prose-sm max-w-none">
-                    <ReactMarkdown components={mdComponents}>{analysisText}</ReactMarkdown>
+                    <ReactMarkdown>{analysisText}</ReactMarkdown>
                   </div>
                 </CardContent>
               </Card>
@@ -963,7 +954,7 @@ Output only the Markdown for the AVS.`;
                   <div className="mt-6">
                     <div className="text-sm font-medium mb-2">AI Matching Notes</div>
                     <div className="prose prose-sm max-w-none text-muted-foreground">
-                      <ReactMarkdown components={mdComponents}>{matchReason}</ReactMarkdown>
+                      <ReactMarkdown>{matchReason}</ReactMarkdown>
                     </div>
                   </div>
                 )}
@@ -985,7 +976,7 @@ Output only the Markdown for the AVS.`;
                 </CardHeader>
                 <CardContent>
                   <div className="rounded-md border bg-muted/40 p-3 max-h-[320px] overflow-auto prose prose-sm max-w-none">
-                    <ReactMarkdown components={mdComponents}>{referralPreview || 'Generating…'}</ReactMarkdown>
+                    <ReactMarkdown>{referralPreview || 'Generating…'}</ReactMarkdown>
                   </div>
                   <div className="mt-3 flex items-center gap-2">
                     <Button variant="outline" onClick={() => copyText(referralPreview)} disabled={!referralPreview}>
@@ -1046,7 +1037,7 @@ Output only the Markdown for the AVS.`;
                 </div>
 
                 <div className="rounded-md border bg-muted/40 p-3 max-h-[420px] overflow-auto prose prose-sm max-w-none">
-                  {avsMarkdown ? <ReactMarkdown components={mdComponents}>{avsMarkdown}</ReactMarkdown> : <span className="text-sm text-muted-foreground">No AVS yet.</span>}
+                  {avsMarkdown ? <ReactMarkdown>{avsMarkdown}</ReactMarkdown> : <span className="text-sm text-muted-foreground">No AVS yet.</span>}
                 </div>
 
                 <div className="flex items-center gap-2">
