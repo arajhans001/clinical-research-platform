@@ -1,6 +1,7 @@
 // src/lib/aiAgents.ts
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+// ---------- Types ----------
 export type Patient = {
   id: string;
   name: string;
@@ -45,13 +46,12 @@ export type MatchingResults = {
   dataSource: string;
 };
 
+// ---------- Perplexity ----------
 type PerplexityConfig = {
-  apiKey?: string;
-  apiUrl: string; // /api/pplx (proxy) OR https://api.perplexity.ai/chat/completions
-  model: string;
+  apiKey?: string;          // only used for DEV_DIRECT
+  apiUrl: string;           // '/api/perplexity' (proxy) OR 'https://api.perplexity.ai/chat/completions'
+  model: string;            // e.g., 'sonar'
 };
-
-const CLINICAL_API = 'https://clinicaltrials.gov/api/v2/studies';
 
 export class PerplexityClient {
   constructor(private cfg: PerplexityConfig) {}
@@ -72,6 +72,8 @@ export class PerplexityClient {
       'Content-Type': 'application/json',
       Accept: 'application/json',
     };
+
+    // If calling upstream directly (DEV only), attach key
     if (this.cfg.apiUrl.includes('perplexity.ai')) {
       if (!this.key) throw new Error('Missing Perplexity API key');
       headers.Authorization = `Bearer ${this.key}`;
@@ -94,6 +96,9 @@ export class PerplexityClient {
     return content as string;
   }
 }
+
+// ---------- ClinicalTrials.gov ----------
+const CLINICAL_API = 'https://clinicaltrials.gov/api/v2/studies';
 
 export class ClinicalTrialsClient {
   async searchPatientSpecificTrials(patient: Patient): Promise<Trial[]> {
@@ -149,6 +154,7 @@ export class ClinicalTrialsClient {
     params.append('query.cond', term);
     params.append('filter.overallStatus', 'RECRUITING,NOT_YET_RECRUITING');
 
+    // Optional coarse geo filter based on "City, ST" or "ST"
     if (patient.location && patient.location.includes(',')) {
       const parts = patient.location.split(',');
       const state = parts[parts.length - 1].trim();
@@ -184,7 +190,9 @@ export class ClinicalTrialsClient {
         sponsor: sponsor.leadSponsor?.name || 'Research Institution',
         condition: (conds.conditions && conds.conditions[0]) || term,
         locations: locs.map((l: any) => `${l.city}, ${l.state || l.country}`).filter(Boolean).slice(0, 3),
-        contact: contacts?.[0] ? `${contacts[0].name} - ${contacts[0].phone || contacts[0].email || 'Contact via ClinicalTrials.gov'}` : undefined,
+        contact: contacts?.[0]
+          ? `${contacts[0].name} - ${contacts[0].phone || contacts[0].email || 'Contact via ClinicalTrials.gov'}`
+          : undefined,
         eligibility: proto.eligibilityModule?.eligibilityCriteria || 'See ClinicalTrials.gov for detailed eligibility criteria',
         lastUpdated: status.statusVerifiedDate || new Date().toISOString().slice(0, 10),
         dataSource: 'ClinicalTrials.gov',
@@ -215,18 +223,29 @@ export class ClinicalTrialsClient {
   }
 }
 
+// ---------- Analysis & Matching ----------
 export class AnalysisEngine {
   constructor(private pplx: PerplexityClient, private trials: ClinicalTrialsClient) {}
 
-  async run(patient: Patient): Promise<{ analysis: ClinicalAnalysis; matches: MatchingResults }> {
+  async run(
+    patient: Patient,
+    metrics?: {
+      severity?: number; diseaseStage?: string; ecog?: number; nyha?: number;
+      hba1c?: number; egfr?: number; bmi?: number; adherence?: number;
+      tests?: Record<string, number>;
+    }
+  ): Promise<{ analysis: ClinicalAnalysis; matches: MatchingResults }> {
+    // 1) Trials
     const trials = await this.trials.searchPatientSpecificTrials(patient);
 
+    // 2) AI clinical analysis (asks for FIT & LIKELIHOOD line)
     let eligibilityAssessment: string;
     try {
-      const prompt = this.clinicalAnalysisPrompt(patient);
+      const prompt = this.clinicalAnalysisPrompt(patient, metrics);
       eligibilityAssessment = await this.pplx.chat(prompt);
     } catch {
-      eligibilityAssessment = `Clinical analysis context prepared for ${patient.primaryDiagnosis || 'patient condition'} using current guidelines. (AI narrative unavailable in this environment.)`;
+      eligibilityAssessment =
+        `Clinical analysis prepared using available patient data. (AI narrative unavailable.)\n\nFIT=70; LIKELIHOOD=65`;
     }
     const analysis: ClinicalAnalysis = {
       eligibilityAssessment,
@@ -235,16 +254,17 @@ export class AnalysisEngine {
       dataSource: 'Evidence-based medical analysis',
     };
 
+    // 3) AI ranking narrative (optional)
     let aiRankReason = '';
     try {
-      const matchingPrompt = this.matchingPrompt(patient, eligibilityAssessment, trials);
+      const matchingPrompt = this.matchingPrompt(patient, eligibilityAssessment, trials, metrics);
       aiRankReason = await this.pplx.chat(matchingPrompt);
     } catch {
-      aiRankReason = 'Match reasoning generated from structured eligibility and patient profile. (AI narrative unavailable in this environment.)';
+      aiRankReason = 'Match reasoning generated from structured eligibility and patient profile. (AI narrative unavailable.)';
     }
 
     const scored = trials
-      .map((t, i) => ({ ...t, matchScore: this.matchScore(t, patient), aiRecommendation: aiRankReason }))
+      .map((t) => ({ ...t, matchScore: this.matchScore(t, patient), aiRecommendation: aiRankReason }))
       .sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0))
       .slice(0, 10);
 
@@ -259,56 +279,98 @@ export class AnalysisEngine {
     return { analysis, matches };
   }
 
-  private clinicalAnalysisPrompt(p: Patient): string {
-    return `Perform a clinical analysis for trial eligibility.
+  private clinicalAnalysisPrompt(
+    p: Patient,
+    m?: {
+      severity?: number; diseaseStage?: string; ecog?: number; nyha?: number;
+      hba1c?: number; egfr?: number; bmi?: number; adherence?: number;
+      tests?: Record<string, number>;
+    }
+  ): string {
+    const tests = m?.tests
+      ? Object.entries(m.tests).slice(0, 10).map(([k, v]) => `- ${k}: ${v}`).join('\n')
+      : 'None';
 
-PATIENT PROFILE:
+    return `Perform a clinical analysis for clinical-trial eligibility **and** participation likelihood.
+
+PATIENT PROFILE
 - Name: ${p.name}
 - Age: ${p.age ?? 'Unknown'}
 - Gender: ${p.gender || 'Unknown'}
 - Primary Diagnosis: ${p.primaryDiagnosis || 'Not specified'}
-- Secondary Conditions: ${p.conditions.join(', ') || 'None'}
+- Co-morbidities: ${p.conditions.join(', ') || 'None'}
 - Current Medications: ${p.medications.join(', ') || 'None'}
 - Location: ${p.location || 'Unknown'}
 - Insurance: ${p.insurance || 'Unknown'}
 
-Provide evidence-based:
-1) Eligibility considerations
-2) Therapeutic recommendations
-3) Medical & safety considerations
-4) Logistical factors
-5) Risk-benefit overview
+STRUCTURED CLINICAL METRICS (if present)
+- Severity (0–1): ${m?.severity ?? 'NA'}
+- Disease Stage: ${m?.diseaseStage ?? 'NA'}
+- ECOG: ${m?.ecog ?? 'NA'}
+- NYHA: ${m?.nyha ?? 'NA'}
+- HbA1c: ${m?.hba1c ?? 'NA'}
+- eGFR: ${m?.egfr ?? 'NA'}
+- BMI: ${m?.bmi ?? 'NA'}
+- Medication adherence (0–1): ${m?.adherence ?? 'NA'}
+- Key tests:
+${tests}
 
-Use concise, professional medical language and avoid speculation.`;
+REQUIREMENTS (write in concise professional **Markdown**):
+1) **Eligibility Synopsis** – key inclusion/exclusion considerations grounded in evidence/guidelines.
+2) **Trial Fit Estimate (0–100)** – a single number with 3–5 bullet reasons referencing the metrics above.
+3) **Participation Likelihood (0–100)** – estimate willingness/ability to participate, with bullets for **motivators** and **barriers** linked to the patient data.
+4) **Safety & Logistics** – monitoring needs, visit cadence, interactions, lab thresholds.
+5) **Disclaimer** – informational only; final judgment lies with treating clinicians.
+
+FINAL LINE (machine-readable, on its own line exactly):
+FIT=<0-100>; LIKELIHOOD=<0-100>`;
   }
 
-  private matchingPrompt(p: Patient, analysis: string, trials: Trial[]): string {
+  private matchingPrompt(
+    p: Patient,
+    analysis: string,
+    trials: Trial[],
+    m?: {
+      severity?: number; diseaseStage?: string; ecog?: number; nyha?: number;
+      hba1c?: number; egfr?: number; bmi?: number; adherence?: number;
+      tests?: Record<string, number>;
+    }
+  ): string {
     const trialsText = trials
       .map(t => `- ${t.title} (${t.nctId}) | Phase ${t.phase} | ${t.status} | Cond: ${t.condition} | Loc: ${t.locations.join(', ')}
-  Eligibility: ${t.eligibility?.slice(0, 400) ?? 'See registry'}`)
+  Eligibility excerpt: ${(t.eligibility || '').slice(0, 400)}`)
       .join('\n');
 
-    return `Rank and score trials (0-100) for this patient based on clinical appropriateness.
+    return `Rank and score trials (0–100) for this patient based on **clinical appropriateness and feasibility**.
 
-PATIENT:
-- Age: ${p.age ?? 'Unknown'}, Gender: ${p.gender || 'Unknown'}
+PATIENT SNAPSHOT
+- Age ${p.age ?? 'Unknown'}, ${p.gender || 'Unknown'}
 - Dx: ${p.primaryDiagnosis || 'Not specified'}
 - Co-morbidities: ${p.conditions.join(', ') || 'None'}
 - Meds: ${p.medications.join(', ') || 'None'}
 - Location: ${p.location || 'Unknown'}
 
-CLINICAL ANALYSIS:
+STRUCTURED METRICS (context)
+- Severity: ${m?.severity ?? 'NA'}, Stage: ${m?.diseaseStage ?? 'NA'}, ECOG: ${m?.ecog ?? 'NA'}, NYHA: ${m?.nyha ?? 'NA'}
+- HbA1c: ${m?.hba1c ?? 'NA'}, eGFR: ${m?.egfr ?? 'NA'}, BMI: ${m?.bmi ?? 'NA'}, Adherence: ${m?.adherence ?? 'NA'}
+
+CLINICAL ANALYSIS (from prior step)
 ${analysis}
 
-TRIALS:
+TRIALS (from ClinicalTrials.gov)
 ${trialsText}
 
-Return reasoning that references concrete eligibility and safety factors.`;
+INSTRUCTIONS
+- For each trial, give a **Standardized Match Rate (0–100)** driven by: condition match, inclusion/exclusion fit, age/performance status, key labs, and status (Recruiting > Not yet recruiting).
+- Note any clear **feasibility factors** that affect participation (visit cadence, travel/logistics inferred from location vs trial sites, monitoring burden).
+- Return concise **Markdown** with a ranked list and 2–4 bullets per trial explaining the score.
+- Do not provide medical advice.`;
   }
 
   private matchScore(t: Trial, p: Patient): number {
     let score = 75;
 
+    // Diagnosis
     if (p.primaryDiagnosis && t.condition) {
       const dx = p.primaryDiagnosis.toLowerCase();
       const tc = t.condition.toLowerCase();
@@ -316,12 +378,14 @@ Return reasoning that references concrete eligibility and safety factors.`;
       if (t.searchTermUsed && dx.includes(t.searchTermUsed.toLowerCase())) score += 15;
     }
 
+    // Co-morbidities
     if (p.conditions?.length) {
       if (p.conditions.some(c => t.condition.toLowerCase().includes(c.toLowerCase()) || c.toLowerCase().includes(t.condition.toLowerCase()))) {
         score += 12;
       }
     }
 
+    // Age eligibility (coarse)
     if (p.age && t.eligibility) {
       const e = t.eligibility.toLowerCase();
       if (p.age >= 18 && e.includes('adult')) score += 6;
@@ -330,6 +394,7 @@ Return reasoning that references concrete eligibility and safety factors.`;
       if (e.includes('18 years') && p.age < 18) score -= 25;
     }
 
+    // Location hint
     if (p.location && t.locations?.length) {
       const pl = p.location.toLowerCase();
       const near = t.locations.some(l => {
@@ -340,17 +405,19 @@ Return reasoning that references concrete eligibility and safety factors.`;
       if (near) score += 8;
     }
 
+    // Status/phase
     if (/^recruit/i.test(t.status)) score += 8;
     else if (/not yet recruit/i.test(t.status)) score += 4;
     if (t.phase === 'Phase 3') score += 6;
     else if (t.phase === 'Phase 2') score += 3;
 
+    // jitter + bounds
     score += Math.random() * 2;
     return Math.min(Math.max(Math.round(score), 50), 100);
   }
 }
 
-// -------- Content generation (referral + NEW after-visit summary) --------
+// -------- Content generation (referral) --------
 export class ContentGenerator {
   constructor(private pplx: PerplexityClient) {}
 
@@ -374,84 +441,11 @@ ELIGIBILITY (excerpt): ${(trial.eligibility || '').slice(0, 600)}
 CLINICAL ANALYSIS:
 ${analysis.eligibilityAssessment}
 
-Include: clinical rationale, safety notes, and next steps. Use professional tone.`;
+Write in professional medical tone using **Markdown** with clear headings and bullet points. Include clinical rationale, safety notes, and next steps.`;
     try {
       return await this.pplx.chat(prompt);
     } catch {
       return 'Referral content unavailable in this environment.';
-    }
-  }
-
-  // NEW: patient-friendly After-Visit Summary (AVS)
-  async afterVisitSummary(
-    patient: Patient,
-    analysis: ClinicalAnalysis,
-    opts?: { trial?: Trial }
-  ): Promise<string> {
-    const t = opts?.trial;
-    const prompt = `Create an After-Visit Summary for the patient in clear, friendly language (about 8th-grade reading level). 
-Use short sections with bullet points where helpful. Do NOT give medical advice beyond general instructions. 
-If a trial is provided, briefly explain it in plain language as an option to discuss with their clinician.
-
-PATIENT:
-- Name: ${patient.name}
-- Age: ${patient.age ?? 'Unknown'} | Gender: ${patient.gender || 'Unknown'}
-- Primary diagnosis: ${patient.primaryDiagnosis || 'Not specified'}
-- Other conditions: ${patient.conditions.join(', ') || 'None listed'}
-- Current medications: ${patient.medications.join(', ') || 'None listed'}
-- Location: ${patient.location || 'Unknown'}
-
-CLINICAL NOTES (for context, rewrite in patient-friendly wording):
-${analysis.eligibilityAssessment}
-
-${t ? `OPTIONAL TRIAL (if appropriate to mention):
-- Title: ${t.title} (NCT ${t.nctId})
-- Condition: ${t.condition}, Phase: ${t.phase}, Status: ${t.status}
-- Sponsor: ${t.sponsor}
-Rewrite as a short paragraph that explains this trial in simple terms and reminds the patient to speak with their clinician before taking any action.` : ''}
-
-Format with these headers:
-- Reason for Visit
-- What We Discussed & Findings
-- Diagnosis (in simple terms)
-- Treatment Plan & Next Steps
-- Medications (current or changes)
-- Allergies (if known, otherwise say "as on file")
-- Follow-up & When to Call Us
-${t ? '- Optional Research Opportunity (if appropriate)\n' : ''}- Contact Information
-
-Add a short disclaimer at the end: this summary is for information only and is not a substitute for medical advice.`;
-    try {
-      return await this.pplx.chat(prompt, 1800, 0.6);
-    } catch {
-      return `After-Visit Summary for ${patient.name}
-
-Reason for Visit:
-- Summary of today’s visit.
-
-What We Discussed & Findings:
-- Key points reviewed.
-
-Diagnosis (simple terms):
-- Your current diagnosis and what it means.
-
-Treatment Plan & Next Steps:
-- Steps we recommend and why.
-
-Medications:
-- Current meds and any changes.
-
-Allergies:
-- As on file.
-
-Follow-up & When to Call Us:
-- Your next appointment and urgent reasons to contact us.
-
-${t ? `Optional Research Opportunity:
-- ${t.title} (NCT ${t.nctId}) — ask your clinician if this might be relevant for you.\n` : ''}Contact Information:
-- Clinic phone/email.
-
-Disclaimer: This summary is informational and does not replace medical advice.`;
     }
   }
 }

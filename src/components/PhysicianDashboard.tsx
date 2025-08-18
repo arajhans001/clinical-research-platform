@@ -1,4 +1,5 @@
 // src/components/PhysicianDashboard.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMemo, useRef, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -7,7 +8,7 @@ import { Badge } from './ui/badge';
 import { Alert, AlertDescription } from './ui/alert';
 import {
   Upload, FileText, Users, Brain, Stethoscope,
-  Database, Search, RefreshCw, ArrowRight, ExternalLink, FileSignature, Clipboard, Download
+  Database, Search, RefreshCw, ArrowRight, ExternalLink, FileSignature, Clipboard, Download, Activity
 } from 'lucide-react';
 
 import {
@@ -35,7 +36,29 @@ const trialsClient = new ClinicalTrialsClient();
 const engine = new AnalysisEngine(pplxClient, trialsClient);
 const contentGen = new ContentGenerator(pplxClient);
 
-// ====== CSV helper (minimal quotes support) ======
+// ---------- Markdown components (clean, professional) ----------
+const mdComponents: any = {
+  h1: ({ children }: any) => <h1 className="text-xl font-bold mt-2 mb-2">{children}</h1>,
+  h2: ({ children }: any) => <h2 className="text-lg font-semibold mt-2 mb-1">{children}</h2>,
+  h3: ({ children }: any) => <h3 className="text-base font-semibold mt-2 mb-1">{children}</h3>,
+  p: ({ children }: any) => <p className="leading-relaxed mb-2">{children}</p>,
+  ul: ({ children }: any) => <ul className="list-disc pl-6 space-y-1 mb-2">{children}</ul>,
+  ol: ({ children }: any) => <ol className="list-decimal pl-6 space-y-1 mb-2">{children}</ol>,
+  li: ({ children }: any) => <li className="leading-relaxed">{children}</li>,
+  blockquote: ({ children }: any) => (
+    <blockquote className="border-l-4 pl-3 italic text-muted-foreground my-2">{children}</blockquote>
+  ),
+  code: ({ inline, className, children, ...props }: any) =>
+    inline ? (
+      <code className="rounded bg-muted px-1.5 py-0.5 text-[13px]" {...props}>{children}</code>
+    ) : (
+      <pre className="rounded-md bg-muted p-3 text-[13px] overflow-x-auto" {...props}>
+        <code>{children}</code>
+      </pre>
+    ),
+};
+
+// ---------- Helpers for CSV + Epic-like fields ----------
 function parseCSV(text: string): Record<string, string>[] {
   const lines = text.split(/\r?\n/).filter(l => l.trim().length);
   if (!lines.length) return [];
@@ -59,7 +82,6 @@ function parseCSV(text: string): Record<string, string>[] {
   return rows;
 }
 
-// normalize a CSV record into our Patient type
 function toPatient(rec: Record<string, string>): Patient {
   const first = rec.first_name || rec.firstname || rec.fname || '';
   const last = rec.last_name || rec.lastname || rec.lname || '';
@@ -94,11 +116,247 @@ function toPatient(rec: Record<string, string>): Patient {
   };
 }
 
+// ---------- Patient metrics (Epic-like) ----------
+type PatientMetrics = {
+  severity?: number;          // 0..1
+  diseaseStage?: string;
+  ecog?: number;              // 0..5
+  nyha?: number;              // 1..4
+  hba1c?: number;             // %
+  egfr?: number;              // mL/min/1.73m2
+  bmi?: number;
+  smoking?: string;           // current, former, never
+  adherence?: number;         // 0..1
+  tests?: Record<string, number>;
+};
+
+const num = (v?: string) => {
+  if (!v) return undefined;
+  const n = parseFloat((v || '').replace(/[^\d.\-]/g,''));
+  return Number.isFinite(n) ? n : undefined;
+};
+const parseStage = (s?: string) => {
+  if (!s) return undefined;
+  const m = s.match(/stage\s*([ivx]+)/i);
+  if (!m) return s;
+  return `Stage ${m[1].toUpperCase()}`;
+};
+const sevToFloat = (s?: string) => {
+  const t = (s || '').toLowerCase();
+  if (t.includes('mild')) return 0.3;
+  if (t.includes('moderate')) return 0.6;
+  if (t.includes('severe')) return 0.9;
+  return undefined;
+};
+
+function extractMetrics(rec: Record<string,string>): PatientMetrics {
+  const tests: Record<string, number> = {};
+  for (const [k, v] of Object.entries(rec)) {
+    if (/^test_result_|^lab_/.test(k) && num(v) !== undefined) {
+      tests[k] = num(v)!;
+    }
+  }
+  return {
+    severity: sevToFloat(rec.condition_severity || rec.severity),
+    diseaseStage: parseStage(rec.disease_stage || rec.cancer_stage || rec.tumor_stage),
+    ecog: num(rec.ecog || rec.performance_status),
+    nyha: num(rec.nyha || rec.nyha_class),
+    hba1c: num(rec.hba1c || rec.hemoglobin_a1c),
+    egfr: num(rec.egfr || rec.gfr),
+    bmi: num(rec.bmi),
+    smoking: (rec.smoking_status || '').toLowerCase(),
+    adherence: (num(rec.medication_adherence) ?? undefined) !== undefined
+      ? Math.min(Math.max((num(rec.medication_adherence) as number) / (rec.medication_adherence?.includes('%') ? 100 : 1), 0), 1)
+      : undefined,
+    tests
+  };
+}
+
+// ---------- Heuristic scoring (informational only) ----------
+type FitResult = { score: number; reasons: string[]; band: 'Low'|'Moderate'|'High' };
+
+function eligibilityFrom(p: Patient, m?: PatientMetrics): FitResult {
+  let score = 50;
+  const reasons: string[] = [];
+
+  // Age
+  if (typeof p.age === 'number') {
+    if (p.age < 18) { score -= 15; reasons.push('Minor age'); }
+    else if (p.age <= 75) { score += 8; reasons.push('Adult age range'); }
+    else if (p.age <= 85) { score -= 5; reasons.push('Older adult'); }
+    else { score -= 10; reasons.push('Very advanced age'); }
+  }
+
+  // Severity / stage
+  if (m?.severity !== undefined) {
+    if (m.severity < 0.4) { score += 8; reasons.push('Mild severity'); }
+    else if (m.severity < 0.7) { score += 2; reasons.push('Moderate severity'); }
+    else { score -= 8; reasons.push('High severity'); }
+  }
+  if (m?.diseaseStage) {
+    const s = m.diseaseStage.toUpperCase();
+    if (/(^| )I( |$)/.test(s) || /II/.test(s)) { score += 5; reasons.push(`Earlier stage (${m.diseaseStage})`); }
+    else if (/IV/.test(s)) { score -= 10; reasons.push(`Advanced stage (${m.diseaseStage})`); }
+  }
+
+  // Performance (ECOG / NYHA)
+  if (typeof m?.ecog === 'number') {
+    if (m.ecog <= 1) { score += 10; reasons.push('ECOG 0–1'); }
+    else if (m.ecog === 2) { score += 5; reasons.push('ECOG 2'); }
+    else { score -= 10; reasons.push('ECOG ≥3'); }
+  }
+  if (typeof m?.nyha === 'number') {
+    if (m.nyha <= 2) { score += 5; reasons.push('NYHA I–II'); }
+    else if (m.nyha === 3) { score -= 5; reasons.push('NYHA III'); }
+    else { score -= 10; reasons.push('NYHA IV'); }
+  }
+
+  // Labs (very coarse)
+  if (typeof m?.hba1c === 'number') {
+    if (m.hba1c >= 6 && m.hba1c <= 9) { score += 3; reasons.push('HbA1c in targetable range'); }
+    else if (m.hba1c > 9) { score -= 3; reasons.push('HbA1c high'); }
+  }
+  if (typeof m?.egfr === 'number') {
+    if (m.egfr > 60) { score += 5; reasons.push('eGFR > 60'); }
+    else if (m.egfr >= 30) { score -= 3; reasons.push('eGFR 30–59'); }
+    else { score -= 10; reasons.push('eGFR < 30'); }
+  }
+  if (typeof m?.bmi === 'number') {
+    if (m.bmi >= 18.5 && m.bmi <= 35) { score += 2; reasons.push('BMI 18.5–35'); }
+    else if (m.bmi < 18.5 || m.bmi >= 40) { score -= 3; reasons.push('BMI outside common ranges'); }
+  }
+
+  // Co-morbidities + meds complexity
+  if (p.conditions.length >= 4) { score -= 8; reasons.push('Multiple co-morbidities'); }
+  else if (p.conditions.length >= 1) { score -= 2; reasons.push('Some co-morbidities'); }
+  if (p.medications.length >= 8) { score -= 4; reasons.push('High medication burden'); }
+
+  // Adherence (if present)
+  if (typeof (m?.adherence) === 'number') {
+    if (m.adherence >= 0.8) { score += 4; reasons.push('Good adherence'); }
+    else if (m.adherence < 0.5) { score -= 4; reasons.push('Low adherence'); }
+  }
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+  const band = score >= 70 ? 'High' : score >= 45 ? 'Moderate' : 'Low';
+  return { score, reasons, band };
+}
+
+function participationFrom(p: Patient, m?: PatientMetrics): FitResult {
+  let score = 60;
+  const reasons: string[] = [];
+
+  // Logistics proxy: location presence
+  if (p.location) { score += 4; reasons.push('Location on file'); }
+  else { score -= 3; reasons.push('Location not specified'); }
+
+  // Age extremes may reduce willingness
+  if (typeof p.age === 'number') {
+    if (p.age < 18 || p.age > 80) { score -= 6; reasons.push('Age may limit willingness'); }
+  }
+
+  // Medication & condition burden
+  if (p.medications.length >= 8) { score -= 5; reasons.push('High medication burden'); }
+  if (p.conditions.length >= 5) { score -= 4; reasons.push('Multiple conditions'); }
+
+  // Performance / adherence
+  if (typeof m?.ecog === 'number') {
+    if (m.ecog <= 1) { score += 6; reasons.push('Good performance status'); }
+    else if (m.ecog >= 3) { score -= 8; reasons.push('Poor performance status'); }
+  }
+  if (typeof m?.adherence === 'number') {
+    if (m.adherence >= 0.8) { score += 5; reasons.push('Good medication adherence'); }
+    else if (m.adherence < 0.5) { score -= 6; reasons.push('Low adherence'); }
+  }
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+  const band = score >= 70 ? 'High' : score >= 45 ? 'Moderate' : 'Low';
+  return { score, reasons, band };
+}
+
+// ---------- Gauge component (animated semi-circle) ----------
+function EligibilityGauge({ value, label }: { value: number; label?: string }) {
+  const clamped = Math.max(0, Math.min(100, value));
+  const radius = 90;
+  const stroke = 12;
+  const cx = 100, cy = 110; // center for semi-circle
+  const startAngle = 180;
+  const endAngle = 0;
+
+  const polar = (cx: number, cy: number, r: number, angle: number) => {
+    const a = (angle - 90) * Math.PI / 180.0;
+    return { x: cx + (r * Math.cos(a)), y: cy + (r * Math.sin(a)) };
+  };
+
+  const describeArc = (startDeg: number, endDeg: number) => {
+    const start = polar(cx, cy, radius, endDeg);
+    const end = polar(cx, cy, radius, startDeg);
+    const largeArc = endDeg - startDeg <= -180 ? 1 : 0;
+    return `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 0 ${end.x} ${end.y}`;
+  };
+
+  const trackPath = describeArc(startAngle, endAngle);
+  const valueAngle = startAngle - (180 * (clamped / 100));
+  const valuePath = describeArc(startAngle, valueAngle);
+
+  const needleLen = radius - 16;
+  const needleAngle = 180 - (180 * (clamped / 100));
+  const needleRad = (needleAngle - 90) * Math.PI / 180;
+  const nx = cx + needleLen * Math.cos(needleRad);
+  const ny = cy + needleLen * Math.sin(needleRad);
+
+  const color =
+    clamped >= 70 ? 'stroke-green-600' :
+    clamped >= 45 ? 'stroke-amber-600' :
+    'stroke-red-600';
+
+  return (
+    <div className="w-full">
+      <svg viewBox="0 0 200 120" className="w-full">
+        {/* Track */}
+        <path d={trackPath} className="stroke-muted-foreground/20" strokeWidth={stroke} fill="none" strokeLinecap="round" />
+        {/* Value arc */}
+        <path
+          d={valuePath}
+          className={`${color}`}
+          strokeWidth={stroke}
+          fill="none"
+          strokeLinecap="round"
+          style={{ transition: 'd 0.6s ease' }}
+        />
+        {/* Needle */}
+        <line
+          x1={100} y1={110}
+          x2={nx} y2={ny}
+          className="stroke-foreground"
+          strokeWidth={2}
+          style={{ transition: 'x2 0.6s ease, y2 0.6s ease' }}
+        />
+        <circle cx={100} cy={110} r={3} className="fill-foreground" />
+        {/* Labels */}
+        <text x="100" y="100" textAnchor="middle" className="fill-foreground text-[12px]">{label || 'Trial Fit'}</text>
+        <text x="100" y="118" textAnchor="middle" className="fill-foreground font-semibold text-[14px]">{clamped}%</text>
+      </svg>
+    </div>
+  );
+}
+
+// Extract "FIT=..; LIKELIHOOD=.." from AI analysis
+function extractScoresFromText(md: string): { fit: number | null; like: number | null } {
+  const m = md.match(/FIT\s*=\s*(\d{1,3})\s*;\s*LIKELIHOOD\s*=\s*(\d{1,3})/i);
+  if (!m) return { fit: null, like: null };
+  const fit = Math.min(100, Math.max(0, parseInt(m[1], 10)));
+  const like = Math.min(100, Math.max(0, parseInt(m[2], 10)));
+  return { fit: isFinite(fit) ? fit : null, like: isFinite(like) ? like : null };
+}
+
+// ====== Component ======
 export const PhysicianDashboard = () => {
   const [activeSection, setActiveSection] = useState<'upload' | 'patients' | 'analysis'>('upload');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [patientMetrics, setPatientMetrics] = useState<Record<string, PatientMetrics>>({});
   const [selected, setSelected] = useState<Patient | null>(null);
 
   const [progressText, setProgressText] = useState<string>('');
@@ -115,6 +373,10 @@ export const PhysicianDashboard = () => {
   const [avsIncludeNct, setAvsIncludeNct] = useState<'yes' | 'no'>('no');
   const [generatingAvs, setGeneratingAvs] = useState<boolean>(false);
 
+  // AI-parsed meters (fallback to heuristics)
+  const [aiFit, setAiFit] = useState<number | null>(null);
+  const [aiLikely, setAiLikely] = useState<number | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const steps = useMemo(() => ([
@@ -122,6 +384,16 @@ export const PhysicianDashboard = () => {
     { icon: Brain, title: 'AI Analysis', desc: 'Automated patient-trial matching' },
     { icon: FileText, title: 'Generate Referrals', desc: 'Automated letters and materials' }
   ]), []);
+
+  const fitHeur = useMemo(() => {
+    if (!selected) return null;
+    return eligibilityFrom(selected, patientMetrics[selected.id]);
+  }, [selected, patientMetrics]);
+
+  const likeHeur = useMemo(() => {
+    if (!selected) return null;
+    return participationFrom(selected, patientMetrics[selected.id]);
+  }, [selected, patientMetrics]);
 
   // ====== Upload & parse (NO auto analysis) ======
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -131,13 +403,18 @@ export const PhysicianDashboard = () => {
     setIsAnalyzing(true);
     try {
       const all: Patient[] = [];
+      const met: Record<string, PatientMetrics> = {};
       for (const file of Array.from(files)) {
         const text = await file.text();
         const rows = parseCSV(text);
-        const pts = rows.map(toPatient);
-        all.push(...pts);
+        for (const rec of rows) {
+          const p = toPatient(rec);
+          all.push(p);
+          met[p.id] = extractMetrics(rec);
+        }
       }
       setPatients(all);
+      setPatientMetrics(met);
       setActiveSection('patients');
     } catch (err) {
       console.error(err);
@@ -159,14 +436,21 @@ export const PhysicianDashboard = () => {
     setReferralPreview('');
     setReferralFor(null);
     setAvsMarkdown('');
+    setAiFit(null);
+    setAiLikely(null);
 
     try {
-      const { analysis, matches } = await engine.run(p);
+      const { analysis, matches } = await engine.run(p, patientMetrics[p.id]);
       setProgressText('AI clinical analysis complete. Ranking trials…');
       setAnalysisText(analysis.eligibilityAssessment);
       setMatchReason(matches.matchingAnalysis);
       setMatches(matches.trials);
       setProgressText('Analysis complete.');
+
+      // Try to parse AI-provided FIT/LIKELIHOOD
+      const { fit, like } = extractScoresFromText(analysis.eligibilityAssessment || '');
+      if (fit != null) setAiFit(fit);
+      if (like != null) setAiLikely(like);
     } catch (err: any) {
       console.error(err);
       const msg = String(err?.message || err);
@@ -239,7 +523,7 @@ REQUIREMENTS:
    - **Lifestyle & Safety Tips**
    - **When to Seek Urgent Care**
    - **Resources & Next Steps**
-2. Use short bullet points and bold key words.
+2. Use short bullet points and **bold** key words.
 3. ${trialLine}
 4. Include a short, plain disclaimer that the AVS is informational and patients should follow their clinician’s guidance.
 5. **Write the final AVS in ${langLabel}.**
@@ -346,7 +630,7 @@ Output only the Markdown for the AVS.`;
               <div className="p-6 border border-dashed border-border rounded-lg hover:border-primary transition-colors group text-center">
                 <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4 group-hover:text-primary transition-colors" />
                 <h4 className="font-semibold mb-2">Upload Patient Files</h4>
-                <p className="text-sm text-muted-foreground mb-4">Supports CSV (recommended)</p>
+                <p className="text-sm text-muted-foreground mb-4">Supports CSV (Epic-like exports work too)</p>
 
                 <Input
                   ref={fileInputRef}
@@ -366,7 +650,10 @@ Output only the Markdown for the AVS.`;
                 <div className="bg-muted/50 p-4 rounded-lg mt-6 text-left">
                   <h5 className="font-medium mb-3">📋 Recommended Patient Data Points:</h5>
                   <div className="flex flex-wrap gap-2">
-                    {['Patient ID','Age/DOB','Gender','Primary Diagnoses','Secondary Conditions','Current Medications','Location','Insurance'].map((point) => (
+                    {[
+                      'Patient ID','Age/DOB','Gender','Primary Diagnoses','Secondary Conditions','Current Medications',
+                      'Location','Insurance','Severity / Stage','ECOG / NYHA','HbA1c','eGFR','BMI'
+                    ].map((point) => (
                       <Badge key={point} variant="secondary" className="text-xs">{point}</Badge>
                     ))}
                   </div>
@@ -554,6 +841,55 @@ Output only the Markdown for the AVS.`;
               </CardContent>
             </Card>
 
+            {/* Trial Fit & Participation Meters */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="w-5 h-5" />
+                  Patient Trial Fit & Participation
+                </CardTitle>
+                <CardDescription>
+                  AI-derived scores when available (falls back to data-driven heuristics).
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid md:grid-cols-2 gap-6 items-center">
+                <div>
+                  <EligibilityGauge
+                    value={aiFit ?? (fitHeur?.score ?? 0)}
+                    label={aiFit != null ? `Trial Fit (AI)` : `Trial Fit (${fitHeur?.band || '—'})`}
+                  />
+                  {aiFit != null && (
+                    <div className="text-xs text-muted-foreground text-center mt-1">
+                      Parsed from analysis (FIT={aiFit}%)
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <EligibilityGauge
+                    value={aiLikely ?? (likeHeur?.score ?? 0)}
+                    label={aiLikely != null ? `Participation (AI)` : `Participation (${likeHeur?.band || '—'})`}
+                  />
+                  {aiLikely != null && (
+                    <div className="text-xs text-muted-foreground text-center mt-1">
+                      Parsed from analysis (LIKELIHOOD={aiLikely}%)
+                    </div>
+                  )}
+                </div>
+
+                <div className="md:col-span-2 space-y-2 text-sm">
+                  <div className="text-muted-foreground">Factors considered (eligibility):</div>
+                  <ul className="list-disc pl-5 space-y-1">
+                    {(fitHeur?.reasons || ['Insufficient data']).slice(0,6).map((r, i) => (
+                      <li key={i}>{r}</li>
+                    ))}
+                  </ul>
+                  <p className="text-[12px] text-muted-foreground mt-2">
+                    These meters are informational and do not replace medical judgment. Refer to official eligibility criteria on ClinicalTrials.gov.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Clinical Analysis Summary (Markdown) */}
             {analysisText && (
               <Card>
@@ -563,7 +899,7 @@ Output only the Markdown for the AVS.`;
                 </CardHeader>
                 <CardContent>
                   <div className="prose prose-sm max-w-none">
-                    <ReactMarkdown>{analysisText}</ReactMarkdown>
+                    <ReactMarkdown components={mdComponents}>{analysisText}</ReactMarkdown>
                   </div>
                 </CardContent>
               </Card>
@@ -626,8 +962,8 @@ Output only the Markdown for the AVS.`;
                 {matchReason && (
                   <div className="mt-6">
                     <div className="text-sm font-medium mb-2">AI Matching Notes</div>
-                    <div className="text-sm text-muted-foreground prose prose-sm max-w-none">
-                      <ReactMarkdown>{matchReason}</ReactMarkdown>
+                    <div className="prose prose-sm max-w-none text-muted-foreground">
+                      <ReactMarkdown components={mdComponents}>{matchReason}</ReactMarkdown>
                     </div>
                   </div>
                 )}
@@ -649,7 +985,7 @@ Output only the Markdown for the AVS.`;
                 </CardHeader>
                 <CardContent>
                   <div className="rounded-md border bg-muted/40 p-3 max-h-[320px] overflow-auto prose prose-sm max-w-none">
-                    <ReactMarkdown>{referralPreview || 'Generating…'}</ReactMarkdown>
+                    <ReactMarkdown components={mdComponents}>{referralPreview || 'Generating…'}</ReactMarkdown>
                   </div>
                   <div className="mt-3 flex items-center gap-2">
                     <Button variant="outline" onClick={() => copyText(referralPreview)} disabled={!referralPreview}>
@@ -710,7 +1046,7 @@ Output only the Markdown for the AVS.`;
                 </div>
 
                 <div className="rounded-md border bg-muted/40 p-3 max-h-[420px] overflow-auto prose prose-sm max-w-none">
-                  {avsMarkdown ? <ReactMarkdown>{avsMarkdown}</ReactMarkdown> : <span className="text-sm text-muted-foreground">No AVS yet.</span>}
+                  {avsMarkdown ? <ReactMarkdown components={mdComponents}>{avsMarkdown}</ReactMarkdown> : <span className="text-sm text-muted-foreground">No AVS yet.</span>}
                 </div>
 
                 <div className="flex items-center gap-2">
