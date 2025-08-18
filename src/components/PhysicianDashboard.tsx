@@ -245,37 +245,40 @@ function FancyGauge({
   value: number;
   label: string;
   footnote?: string;
-  id: string; // for unique gradient ids
+  id: string; // unique per gauge instance
 }) {
   const v = Math.max(0, Math.min(100, Math.round(value)));
-  const radius = 120;
-  const stroke = 16;
-  const cx = 140, cy = 150;
 
-  // Semi-arc path (180°)
-  const startAngle = Math.PI;   // 180°
-  const endAngle = 0;           // 0°
-  const arc = (angle: number) => ({
-    x: cx + radius * Math.cos(angle),
-    y: cy + radius * Math.sin(angle),
+  // Geometry
+  const R = 120;         // radius
+  const STROKE = 16;     // arc thickness
+  const CX = 140, CY = 150; // center of the semicircle (bottom-center)
+
+  // Build a 180° arc path from LEFT (π) to RIGHT (0)
+  const arcPoint = (angRad: number) => ({
+    x: CX + R * Math.cos(angRad),
+    y: CY + R * Math.sin(angRad),
   });
-  const p0 = arc(startAngle);
-  const p1 = arc(endAngle);
-  const pathD = `M ${p0.x} ${p0.y} A ${radius} ${radius} 0 0 1 ${p1.x} ${p1.y}`;
+  const LEFT = Math.PI;  // 180°
+  const RIGHT = 0;       //   0°
+  const pL = arcPoint(LEFT);
+  const pR = arcPoint(RIGHT);
+  const arcD = `M ${pL.x} ${pL.y} A ${R} ${R} 0 0 1 ${pR.x} ${pR.y}`;
 
-  // Use pathLength=100 to animate by percentage
-  const dash = 100;
-  const dashOffset = dash - v;
+  // Arc fill by percentage using stroke-dashoffset
+  const PATH_LEN = 100;
+  const dashOffset = PATH_LEN - v;
 
-  // Needle
-  const angle = Math.PI - (Math.PI * v) / 100; // map 0..100 to 180..0 deg
-  const needleLen = radius - 26;
-  const nx = cx + needleLen * Math.cos(angle);
-  const ny = cy + needleLen * Math.sin(angle);
+  // --- Needle mapping ---
+  // Make the needle start pointing LEFT (0%) and sweep to RIGHT (100%)
+  // We draw the needle initially pointing LEFT (horizontal),
+  // then rotate it 0..180 degrees around (CX, CY).
+  const needleLen = R - 26;
+  const rotationDeg = 180 * (v / 100);
 
   return (
     <div className="w-full">
-      <svg viewBox="0 0 280 180" className="w-full">
+      <svg viewBox="0 0 280 190" className="w-full" shapeRendering="geometricPrecision">
         <defs>
           <linearGradient id={`g-${id}`} x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#ef4444" />   {/* red */}
@@ -289,57 +292,51 @@ function FancyGauge({
 
         {/* Track */}
         <path
-          d={pathD}
-          pathLength={100}
+          d={arcD}
+          pathLength={PATH_LEN}
+          strokeWidth={STROKE}
+          fill="none"
+          strokeLinecap="round"
           className="stroke-muted-foreground/20"
-          strokeWidth={stroke}
-          fill="none"
-          strokeLinecap="round"
         />
-        {/* Value */}
+
+        {/* Value arc (animated) */}
         <path
-          d={pathD}
-          pathLength={100}
-          stroke="url(#g-${id})"
-          strokeWidth={stroke}
+          d={arcD}
+          pathLength={PATH_LEN}
+          stroke={`url(#g-${id})`}
+          strokeWidth={STROKE}
           fill="none"
           strokeLinecap="round"
-          strokeDasharray={dash}
+          strokeDasharray={PATH_LEN}
           strokeDashoffset={dashOffset}
           style={{ transition: 'stroke-dashoffset 700ms ease' }}
           filter={`url(#shadow-${id})`}
         />
-        {/* Needle */}
-        <line
-          x1={cx}
-          y1={cy}
-          x2={nx}
-          y2={ny}
-          className="stroke-foreground"
-          strokeWidth={2}
-          style={{ transition: 'x2 600ms ease, y2 600ms ease' }}
-        />
-        <circle cx={cx} cy={cy} r={4} className="fill-foreground" />
-        {/* Ticks */}
-        {Array.from({ length: 11 }).map((_, i) => {
-          const tAng = Math.PI - (Math.PI * i) / 10;
-          const r1 = radius + 2;
-          const r2 = radius - 10;
-          const x1 = cx + r1 * Math.cos(tAng);
-          const y1 = cy + r1 * Math.sin(tAng);
-          const x2 = cx + r2 * Math.cos(tAng);
-          const y2 = cy + r2 * Math.sin(tAng);
-          return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} className="stroke-muted-foreground/30" strokeWidth={1} />;
-        })}
 
-        {/* Labels */}
-        <text x={cx} y={cy - 8} textAnchor="middle" className="fill-foreground text-[14px] font-medium">
+        {/* Needle (baseline points LEFT, then rotate 0..180°) */}
+        <g transform={`rotate(${rotationDeg} ${CX} ${CY})`} style={{ transition: 'transform 600ms ease' }}>
+          <line
+            x1={CX}
+            y1={CY}
+            x2={CX - needleLen}
+            y2={CY}
+            stroke="currentColor"
+            strokeWidth={3}
+            strokeLinecap="round"
+          />
+        </g>
+        <circle cx={CX} cy={CY} r={4} className="fill-foreground" />
+
+        {/* Labels inside SVG for precise positioning */}
+        <text x={CX} y={CY - 2} textAnchor="middle" className="fill-foreground text-[15px] font-medium">
           {label}
         </text>
-        <text x={cx} y={cy + 22} textAnchor="middle" className="fill-foreground text-[26px] font-bold">
+        <text x={CX} y={CY + 26} textAnchor="middle" className="fill-foreground text-[24px] font-bold">
           {v}%
         </text>
       </svg>
+
       {footnote && (
         <div className="mt-1 text-xs text-muted-foreground text-center">
           {footnote}
@@ -348,6 +345,7 @@ function FancyGauge({
     </div>
   );
 }
+
 
 // ====== Component ======
 export const PhysicianDashboard = () => {
